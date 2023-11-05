@@ -1,1 +1,2 @@
 gpiozero # raspberry pi gpio interface library
+pygame # device inputs, sound, and graphics
