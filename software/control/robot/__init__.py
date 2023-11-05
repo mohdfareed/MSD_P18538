@@ -1,6 +1,9 @@
 """
 Robot control package.
 
-This package contains the robot control code. It is responsible for controlling
-the robot's hardware such as the motors and sensors.
+This package contains the robot control code. It provides an interface to
+control various robot components, such as the motors.
+
+Documentation: https://gpiozero.readthedocs.io/en/latest/index.html
+PINOUT: https://gpiozero.readthedocs.io/en/latest/recipes.html#pin-numbering
 """
