@@ -1,2 +1,6 @@
 gpiozero # raspberry pi gpio interface library
 pygame # device inputs, sound, and graphics
+SpeechRecognition # speech recognition
+
+# REVIEW - added temporarily
+pyaudio # use laptop microphone for speech recognition demo
