@@ -42,22 +42,23 @@ def transcribe(recordings=recordings, recognize=recorder.recognize_google):
     last_sample = bytes()  # current raw audio bytes
 
     while True:
-        sleep(0)  # important for multithreading
+        sleep(0.25)  # important for multithreading
         if recordings.empty():
             pass  # wait for new audio data
 
         # process the audio data
         phrase_complete, phrase_time = _check_for_phrase(phrase_time)
-        if phrase_complete:
-            last_sample = bytes()  # clear working audio buffer
-            yield "\n"  # yield an newline to indicate a pause
+        if phrase_complete:  # clear working audio buffer
+            last_sample = bytes()
         audio_data = _process_recording(last_sample, temp_file)
 
-        # transcribe the audio
-        try:
-            text: str = recognize(audio_data).strip()  # type: ignore
+        try:  # transcribe the audio
+            text = recognize(audio_data).strip()
         except sr.UnknownValueError or sr.RequestError:
             text = ""  # unrecognized audio or recognition engine error
+
+        if phrase_complete:
+            yield "\n"  # yield an newline to indicate a pause between phrases
         yield text  # yield the transcript of the audio
 
 
@@ -91,6 +92,7 @@ def _check_for_phrase(phrase_time):
         bool: Whether a phrase has been completed
         _type_: The last time new audio data was received
     """
+
     phrase_complete = False  # start a new phrase
     now = datetime.utcnow()
 
