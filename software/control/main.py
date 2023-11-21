@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import os
 
-from audio import core as audio
+from audio.core import record as record_audio
+from audio.transcription import PHRASE_TERMINATOR, transcribe
 
 # from controller import bluetooth_controller as controller
 # from robot import motor, servo, speaker
@@ -12,23 +13,13 @@ def main():
     # test_motors()
     # test_speakers()
 
-    audio.startup()
-    audio.record()
-
+    record_audio()
     transcriptions = [""]
-    phrase_complete = False
-    for transcript in audio.transcribe(audio.recordings):
-        if transcript == "":
+    for transcript in transcribe():
+        if transcript == PHRASE_TERMINATOR:
+            transcriptions.append("")  # start new phrase
             continue
-        if transcript == "\n":
-            phrase_complete = True
-            continue
-
-        if phrase_complete:
-            transcriptions.append(transcript)
-            phrase_complete = False
-        else:
-            transcriptions[-1] = transcript
+        transcriptions[-1] = transcript
         print_transcription(transcriptions)
 
 
