@@ -13,7 +13,7 @@ recorder: sr.Recognizer = sr.Recognizer()
 # constants
 PHRASE_TERMINATOR = "\n"
 """The indicator of an end of a phrase."""
-_PHRASE_TIMEOUT = 1.5  #  the maximum pause between phrases (seconds)
+_PHRASE_TIMEOUT = 2.5  #  the maximum pause between phrases (seconds)
 _RECORD_TIMEOUT = 0.5  # the maximum recording chunk size (seconds)
 _MAX_RECORD_DURATION = 5  # the maximum recording duration (seconds)
 
@@ -91,15 +91,15 @@ def _record(source: sr.AudioSource = sr.Microphone(sample_rate=16000)):
         Queue: The queue of recorded audio chunks. The chunks are raw audio
         data. The queue is thread-safe.
     """
+
     recordings: Queue[sr.AudioData] = Queue()
+    with source:
+        recorder.adjust_for_ambient_noise(source)
 
     def callback(_, audio: sr.AudioData) -> None:
         recordings.put(audio)
 
-    with source:
-        recorder.adjust_for_ambient_noise(source)
     recorder.listen_in_background(
         source, callback, phrase_time_limit=_RECORD_TIMEOUT
     )
-
     return recordings

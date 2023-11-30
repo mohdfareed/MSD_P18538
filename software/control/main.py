@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import threading
 
 from audio import engines as recognition_engines
@@ -9,13 +8,16 @@ from robot import motor, servo, speaker
 
 
 def main():
-    # controller.start()
+    controller.start()
+    test_motors()
+    test_speakers()
     test_transcription()
-    # test_motors()
-    # test_speakers()
 
-    # wait for the user to exit
-    input("Press anything to exit.\n")
+    try:  # wait for the user to exit
+        while True:
+            pass
+    except KeyboardInterrupt:
+        print("\nExiting...")
     exit(0)
 
 
@@ -27,26 +29,21 @@ def test_motors():
 
 def test_speakers():
     for sound in speaker.sounds:
+        print("Playing sound: " + sound)
         speaker.play(sound)
 
 
 def test_transcription():
-    # source = transcription.sr.Microphone(sample_rate=16000)
-    source = transcription.sr.AudioFile("demo.wav")
+    source = transcription.sr.Microphone(sample_rate=16000)
     recognizer = recognition_engines.whisper_recognize
 
-    # function to display transcriptions
-    def print_transcription(transcription: str):
-        # clear line and print transcription
-        print(" " * os.get_terminal_size().columns, end="\r", flush=True)
-        print(transcription, end="\r", flush=True)
-
     def transcribe():  # transcribe audio from a source in real-time
-        print("Listening...")
+        print("Transcript:")
         for transcript in transcription.transcribe(source, recognizer):
             if transcript == transcription.PHRASE_TERMINATOR:
-                continue
-            print_transcription(transcript)
+                print()  # start a new line for a new phrase
+            # clear line and print transcription
+            print(transcript, end="\r", flush=True)
 
     # start transcribing in the background
     threading.Thread(target=transcribe, daemon=True).start()
