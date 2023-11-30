@@ -4,13 +4,14 @@ import threading
 from audio import engines as recognition_engines
 from audio import transcription
 from controller import bluetooth_controller as controller
-from robot import motor, servo, speaker
+
+# from robot import motor, servo, speaker
 
 
 def main():
-    controller.start()
-    test_motors()
-    test_speakers()
+    # controller.start()
+    # test_motors()
+    # test_speakers()
     test_transcription()
 
     try:  # wait for the user to exit
