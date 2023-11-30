@@ -55,7 +55,7 @@ def transcribe(
             phrase_buffer += data
         audio_data = sr.AudioData(phrase_buffer, sample_rate, sample_width)
 
-        try:  # transcribe the audio)
+        try:  # transcribe the audio
             yield recognize(audio_data)
         except sr.UnknownValueError:
             continue  # unrecognized audio
