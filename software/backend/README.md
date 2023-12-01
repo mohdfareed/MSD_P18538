@@ -1,7 +1,8 @@
-# Control Software
+# Backend
 
-This program is responsible for controlling the robot. It is written in Python
-and is designed to run on a Raspberry Pi 4.
+## Overview
+
+The backend is responsible for controlling the robot and the Raspberry Pi. It consists of different endpoints that are exposed locally. The endpoints are used by the frontend to control the robot and the Raspberry Pi.
 
 ## Requirements
 
@@ -9,9 +10,10 @@ and is designed to run on a Raspberry Pi 4.
 
 ## Development Setup
 
-```bash
+```sh
 ./setup.sh
 source .venv/bin/activate
+./app.py
 ```
 
 ## Design

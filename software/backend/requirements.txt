@@ -1,11 +1,12 @@
 # rest api
 flask[async] # web server
-
-# control
-gpiozero # raspberry pi gpio interface library
-pygame # device inputs, sound, and graphics
+flask-executor # async task execution
 
 # transcription
 SpeechRecognition # speech recognition
 openai # whisper recognition engine
 pyaudio # device microphone
+
+# control
+gpiozero # raspberry pi gpio interface library
+pygame # device inputs, sound, and graphics
