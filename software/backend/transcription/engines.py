@@ -5,11 +5,13 @@ This module provides an interface for speech recognition engines. It defines
 methods for converting audio data to text.
 """
 
+import asyncio
+
 import speech_recognition as sr
-from audio.transcription import recorder
+from transcription.core import recorder
 
 
-def google_recognize(audio_data: sr.AudioData) -> str:
+async def google_recognize(audio_data: sr.AudioData) -> str:
     """Recognize audio using Google's speech recognition engine.
 
     Args:
@@ -19,10 +21,11 @@ def google_recognize(audio_data: sr.AudioData) -> str:
         str: The transcription of the audio.
     """
 
-    return recorder.recognize_google(audio_data)  # type: ignore
+    transcript = await asyncio.to_thread(recorder.recognize_google, audio_data)
+    return transcript  # type: ignore
 
 
-def whisper_recognize(audio_data: sr.AudioData) -> str:
+async def whisper_recognize(audio_data: sr.AudioData) -> str:
     """Recognize audio using OpenAI's Whisper speech recognition engine.
 
     Args:
@@ -32,4 +35,7 @@ def whisper_recognize(audio_data: sr.AudioData) -> str:
         str: The transcription of the audio.
     """
 
-    return recorder.recognize_whisper_api(audio_data)  # type: ignore
+    transcript = await asyncio.to_thread(
+        recorder.recognize_whisper_api, audio_data
+    )
+    return transcript  # type: ignore
