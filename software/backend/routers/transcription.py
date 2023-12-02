@@ -43,7 +43,6 @@ async def _start_transcription():
 
     source = transcription.sr.Microphone(sample_rate=16000)
     recognizer = recognition_engines.whisper_recognize
-    print("Transcript:")
 
     try:
         async for transcript in transcription.transcribe(source, recognizer):

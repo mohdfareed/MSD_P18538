@@ -43,13 +43,14 @@ async def transcribe(
 
     # start listening in the background
     recordings, data_event, stopper = _record(source)
-    transcriber = _transcribe(recordings, recognizer, data_event)
+    transcription = _transcribe(recordings, recognizer, data_event)
     try:  # transcribe the audio
-        async for transcript in transcriber:
+        async for transcript in transcription:
             await asyncio.sleep(0)  # important for multithreading
             yield transcript
     finally:
-        stopper()  # stop listening in the background
+        transcription.aclose()  # close generator
+        stopper()  # stop listening
 
 
 async def _transcribe(
@@ -109,9 +110,8 @@ def _record(source: sr.AudioSource = sr.Microphone(sample_rate=16000)):
         recorder.adjust_for_ambient_noise(source)
 
     def callback(_, audio: sr.AudioData):
-        # add audio data to the queue
+        # add audio data to the queue and trigger new data event
         asyncio.run_coroutine_threadsafe(recordings.put(audio), main_loop)
-        # indicate new audio data
         main_loop.call_soon_threadsafe(new_data_event.set)
 
     stopper = recorder.listen_in_background(

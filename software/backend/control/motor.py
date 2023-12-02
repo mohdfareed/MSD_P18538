@@ -16,6 +16,7 @@ def move(speed: float):
         speed (float): The speed to move the car at. Must be between -1 and 1.
         Zero stops the car.
     """
+
     if abs(speed) > 1:
         LOGGER.error("Invalid speed: %s", speed)
         raise ValueError("Speed must be between -1 and 1")

@@ -12,8 +12,8 @@ The backend is responsible for controlling the robot and the Raspberry Pi. It co
 
 ```sh
 ./setup.sh
-source .venv/bin/activate
-./app.py
+source venv/bin/activate
+./startup.py --debug
 ```
 
 ## Design

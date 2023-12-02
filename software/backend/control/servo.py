@@ -13,6 +13,7 @@ def turn(angle: float):
         angle (float): The angle to turn the car at. Must be between -1 and 1.
         Zero is straight.
     """
+
     if abs(angle) > 1:
         LOGGER.error("Invalid angle: %s", angle)
         raise ValueError("Angle must be between -1 and 1")
