@@ -1,5 +1,5 @@
 """
-The software backend package.
+The backend application.
 
 It uses FastAPI to provide a REST API for the frontend to use.
 

@@ -2,8 +2,8 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException, status
 
-from ..transcription import core as transcription
-from ..transcription import engines as recognition_engines
+from ..services.transcription import core as transcription
+from ..services.transcription import engines as recognition_engines
 
 router = APIRouter()
 
@@ -51,6 +51,6 @@ async def _start_transcription():
             # clear line and print transcription
             print(transcript, end="\r", flush=True)
     except asyncio.CancelledError:
-        print("\nTranscription stopped (CancelledError)")
+        print("\nTranscription stopped")
     finally:
         _transcriber = None

@@ -1,15 +1,15 @@
 from fastapi import APIRouter, HTTPException, status
 
-from ..control import motor, servo
+from ..models.movement import Movement
+from ..services.control import motors
 
 router = APIRouter()
 
 
 @router.post("/control/", status_code=status.HTTP_200_OK)
-async def move(angle: float, speed: float):
+async def move(movement: Movement):
     try:
-        servo.turn(angle)
-        motor.move(speed)
+        motors.drive(movement)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid angle or speed")
 
@@ -18,6 +18,5 @@ async def move(angle: float, speed: float):
 
 @router.post("/control/stop", status_code=status.HTTP_200_OK)
 async def stop():
-    motor.move(0)
-    servo.turn(0)
+    motors.drive(Movement(speed=0, angle=0))
     return {"message": "Car stopped"}
