@@ -14,6 +14,7 @@ The project is written in Python, and uses the [FastAPI](https://fastapi.tiangol
 ## Development Setup
 
 ```sh
+cd software/backend # change directory to the backend
 ./setup.sh # setup environment and installs dependencies
 source venv/bin/activate # activate virtual environment
 ./startup.py --debug # start the backend server in debug mode
