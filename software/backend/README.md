@@ -15,13 +15,41 @@ The project is written in Python, and uses the [FastAPI](https://fastapi.tiangol
 
 ## Development Setup
 
+### Backend
+
 ```sh
 ./setup.sh # setup environment and installs dependencies
 source venv/bin/activate # activate virtual environment
 ./startup.py --debug # start the backend server in debug mode
 ```
 
+Test the backend by sending a request to the server:
+
+```sh
+curl -i -X GET http://localhost:8000/
+```
+
+Which results in the following response:
+
+```http
+HTTP/1.1 200 OK
+date: Sat, 02 Dec 2023 03:28:30 GMT
+server: uvicorn
+content-length: 21
+content-type: application/json
+
+{"message":"Running"}
+```
+
 ## Design
+
+```mermaid
+classDiagram
+    backend --|> routers : includes
+    routers ..> backend : interacts with
+    frontend <--> routers : HTTP requests
+    controller <--> routers : HTTP requests
+```
 
 ```mermaid
 classDiagram
