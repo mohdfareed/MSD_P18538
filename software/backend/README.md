@@ -2,7 +2,12 @@
 
 ## Overview
 
-The backend is responsible for controlling the robot and the Raspberry Pi. It consists of different endpoints that are exposed locally. The endpoints are used by the frontend to control the robot and the Raspberry Pi.
+The backend of the project is responsible for the following:
+
+- Controlling the robot's hardware
+- Configuring the robot
+
+The project is written in Python, and uses the [FastAPI](https://fastapi.tiangolo.com/) framework to provide a REST API for interfacing with the robot.
 
 ## Requirements
 
@@ -11,69 +16,54 @@ The backend is responsible for controlling the robot and the Raspberry Pi. It co
 ## Development Setup
 
 ```sh
-./setup.sh
-source venv/bin/activate
-./startup.py --debug
+./setup.sh # setup environment and installs dependencies
+source venv/bin/activate # activate virtual environment
+./startup.py --debug # start the backend server in debug mode
 ```
 
 ## Design
 
 ```mermaid
 classDiagram
-    class ControlPackage {
-        <<package>>
-    }
-    class main {
-        +main()
+    class backend {
+        +main.py
     }
 
-    class RobotPackage {
-        <<package>>
-    }
-    class Motor {
-        +move(speed)
-    }
-    class Servo {
-        +steer(angle)
-    }
-    class Speaker {
-        +play(filename)
+    class control {
+        +motor.py
+        +servo.py
+        +speaker.py
     }
 
-    class ControllerPackage {
-        <<package>>
-    }
-    class BluetoothController {
-        +connect()
-        +disconnect()
-        +start(config)
-        +stop()
+    class controllers {
+        +bluetooth.py
+        +wifi.py
     }
 
-    class AudioPackage {
-        <<package>>
-    }
-    class Transcription {
-        +transcriber Recognizer
-        +transcribe(Queue recordings)
-    }
-    class Core {
-        +recordings Queue[AudioData]
-        +source Microphone
-        +startup()
-        +record()
+    class routers {
+        +control.py
+        +system.py
     }
 
-    ControlPackage --> main : contains
-    main --> RobotPackage : uses
-    main --> ControllerPackage : uses
-    main --> AudioPackage : uses
-    RobotPackage --> Motor : contains
-    RobotPackage --> Servo : contains
-    RobotPackage --> Speaker : contains
-    ControllerPackage --> BluetoothController : contains
-    AudioPackage --> Transcription : contains
-    AudioPackage --> Core : contains
+    class transcription {
+        +engines.py
+        +transcribe(source, engine): str[]
+    }
+
+    backend --|> control : includes
+    backend --|> routers : includes
+    backend --|> transcription : includes
+    backend --|> controllers : includes
+    routers ..> control : interacts with
+    routers ..> transcription : interacts with
+    routers ..> controllers : interacts with
+
+    control --|> motor : includes
+    control --|> servo : includes
+    control --|> speaker : includes
+    controllers --|> bluetooth : includes
+    controllers --|> wifi : includes
+    transcription --|> engines : includes
 ```
 
 ### Live Transcription
