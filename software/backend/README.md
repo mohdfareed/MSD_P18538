@@ -1,7 +1,5 @@
 # Backend
 
-## Overview
-
 The backend of the project is responsible for the following:
 
 - Controlling the robot's hardware
@@ -14,8 +12,6 @@ The project is written in Python, and uses the [FastAPI](https://fastapi.tiangol
 - [Python >=3.11](https://www.python.org/downloads/release/python-370/)
 
 ## Development Setup
-
-### Backend
 
 ```sh
 ./setup.sh # setup environment and installs dependencies
@@ -43,12 +39,22 @@ content-type: application/json
 
 ## Design
 
+The backend is designed to be modular, with each component being responsible for a specific task. The following components are included:
+
+- **Interfaces**: They are responsible for providing a method of communication with the backend; captures user commands and sends them to the backend, and displays responses from the backend. These can include a web interface, a command-line interface, or a wireless controller.
+- **Routers**: These are the endpoints that the frontend communicates with. They are responsible for translating frontend commands into backend commands, and for returning responses to the frontend. They define the project's API.
+- **Services**: These are the components that are responsible for executing backend commands. They are responsible for controlling the robot's hardware, and for configuring the robot. These define the core logic of the project.
+
 ```mermaid
-classDiagram
-    backend --|> routers : includes
-    routers ..> backend : interacts with
-    frontend <--> routers : HTTP requests
-    controller <--> routers : HTTP requests
+sequenceDiagram
+    user ->> frontend: Command
+    frontend ->> router: HTTP requests
+    router ->> service: Calls
+    service ->> hardware: Controls
+    hardware -->> service: Reports
+    service -->> router: Returns
+    router -->> frontend: Response
+    frontend -->> user: Response
 ```
 
 ```mermaid
@@ -95,6 +101,8 @@ classDiagram
 ```
 
 ### Live Transcription
+
+Live transcription is a feature that allows the robot to transcribe speech in real-time. It's implemented using the following components:
 
 ```mermaid
 flowchart LR
