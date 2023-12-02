@@ -13,4 +13,5 @@ app.include_router(transcription.router)
 
 @app.get("/")
 async def root():
+    LOGGER.info("Running")
     return {"message": "Running"}
