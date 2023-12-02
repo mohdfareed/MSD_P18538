@@ -1,6 +1,6 @@
 # rest api
-flask[async] # web server
-flask-executor # async task execution
+fastapi # rest api framework
+uvicorn # asgi server
 
 # transcription
 SpeechRecognition # speech recognition
@@ -10,3 +10,7 @@ pyaudio # device microphone
 # control
 gpiozero # raspberry pi gpio interface library
 pygame # device inputs, sound, and graphics
+
+# misc
+rich # logging formatting
+python-dotenv # environment variables

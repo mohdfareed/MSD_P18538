@@ -1,5 +1,6 @@
-from control import LOGGER
 from gpiozero import Servo
+
+from . import LOGGER
 
 # servo = Servo(18)
 # servo.mid()

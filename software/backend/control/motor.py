@@ -1,5 +1,6 @@
-from control import LOGGER
 from gpiozero import Motor
+
+from . import LOGGER
 
 # motor_left = Motor(forward=4, backward=14, pwm=True)
 # motor_right = Motor(forward=17, backward=27, pwm=True)

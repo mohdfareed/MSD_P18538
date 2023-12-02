@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 from typing import AsyncGenerator, Callable, Coroutine
 
 import speech_recognition as sr
-from transcription import LOGGER
+
+from . import LOGGER
 
 # globals
 recorder: sr.Recognizer = sr.Recognizer()
@@ -12,6 +13,7 @@ recorder: sr.Recognizer = sr.Recognizer()
 # constants
 PHRASE_TERMINATOR = "\n"
 """The indicator of an end of a phrase."""
+
 _PHRASE_TIMEOUT = 2.5  #  the maximum pause between phrases (seconds)
 _RECORD_TIMEOUT = 0.5  # the maximum recording chunk size (seconds)
 _MAX_RECORD_DURATION = 5  # the maximum recording duration (seconds)
@@ -25,7 +27,6 @@ recorder.dynamic_energy_threshold = False
 async def transcribe(
     source: sr.AudioSource,
     recognizer: Callable[[sr.AudioData], Coroutine[None, None, str]],
-    cancel_event: asyncio.Event,
 ) -> AsyncGenerator[str, None]:
     """Generate transcription of audio from a source using a recognition engine
     progressively. Yields the transcription of the audio, separated as phrases.
@@ -38,18 +39,16 @@ async def transcribe(
     Yields:
         str: The transcription of the audio in the provided queue.
         PHRASE_TERMINATOR indicates the start of a new phrase.
-        None: If the audio could not be recognized.
     """
+
     # start listening in the background
     recordings, data_event, stopper = _record(source)
-
-    transcriber = _transcribe(recordings, recognizer, data_event, cancel_event)
+    transcriber = _transcribe(recordings, recognizer, data_event)
     try:  # transcribe the audio
         async for transcript in transcriber:
             await asyncio.sleep(0)  # important for multithreading
             yield transcript
     finally:
-        LOGGER.debug("Stopping transcription")
         stopper()  # stop listening in the background
 
 
@@ -57,19 +56,16 @@ async def _transcribe(
     recordings: asyncio.Queue[sr.AudioData],
     recognizer: Callable[[sr.AudioData], Coroutine[None, None, str]],
     data_event: asyncio.Event,
-    cancel_event: asyncio.Event,
 ) -> AsyncGenerator[str, None]:
     phrase_time = datetime.min  # last time new audio was received
     phrase_buffer = bytes()  # buffer of current (incomplete) phrase audio
     sample_rate = 0  # the sample rate of the audio
     sample_width = 0  # the sample width of the audio
 
-    while not cancel_event.is_set():
-        # wait for new audio data
+    while True:  # wait for new audio data
         if recordings.empty():
             await data_event.wait()
             data_event.clear()
-            continue  # check for cancellation
 
         # check for a new phrase (pause in speech)
         now = datetime.utcnow()
@@ -79,10 +75,8 @@ async def _transcribe(
         phrase_time = now  # update last time new audio was received
 
         # build phrase audio data
-        while not recordings.empty() and not cancel_event.is_set():
-            audio_data = await recordings.get()  # read from the queue
-
-            # update sample rate and width
+        while not recordings.empty():
+            audio_data = await recordings.get()
             if not sample_rate or not sample_width:
                 sample_rate = audio_data.sample_rate
                 sample_width = audio_data.sample_width
@@ -101,7 +95,7 @@ async def _transcribe(
         except sr.UnknownValueError:
             continue  # unrecognized audio
         except sr.RequestError as e:
-            LOGGER.error("Transcription failed: %s", e)
+            LOGGER.warning("Transcription failed: %s", e)
             continue  # recognition engine error
 
 
@@ -111,7 +105,7 @@ def _record(source: sr.AudioSource = sr.Microphone(sample_rate=16000)):
     main_loop = asyncio.get_event_loop()
 
     with source:  # adjust for ambient noise
-        LOGGER.info("Adjusting for ambient noise")
+        LOGGER.debug("Adjusting listener for ambient noise")
         recorder.adjust_for_ambient_noise(source)
 
     def callback(_, audio: sr.AudioData):

@@ -8,7 +8,8 @@ methods for converting audio data to text.
 import asyncio
 
 import speech_recognition as sr
-from transcription.core import recorder
+
+from .core import recorder
 
 
 async def google_recognize(audio_data: sr.AudioData) -> str:

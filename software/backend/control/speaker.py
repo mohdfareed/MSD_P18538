@@ -1,5 +1,6 @@
 import pygame
-from control import LOGGER
+
+from . import LOGGER
 
 # initialize Pygame Mixer
 pygame.mixer.init()
