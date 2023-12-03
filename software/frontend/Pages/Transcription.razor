@@ -1,0 +1,52 @@
+@page "/transcription"
+@inject Services.TranscriptionService TranscriptionService
+@using MudBlazor
+
+<PageTitle>Transcription</PageTitle>
+<MudText Typo="Typo.h3">Live Transcription</MudText>
+
+<MudCard>
+    <MudCardContent>
+        <MudText>@((MarkupString)string.Join("<br />", transcriptions))</MudText>
+    </MudCardContent>
+
+    <MudCardActions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(async () =>
+            await StartTranscription())">Start</MudButton>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@(async () =>
+            await StopTranscription())">Stop</MudButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    private const int MaxTranscriptionLines = 10;
+    private List<string> transcriptions = new List<string>();
+
+    private async Task StartTranscription()
+    {
+        var transcription = TranscriptionService.GetTranscriptionStreamAsync();
+        await foreach (var text in transcription)
+        {
+            // check if a new phrase is starting
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                transcriptions.Add(""); // Add new line
+                if (transcriptions.Count > MaxTranscriptionLines)
+                {
+                    transcriptions.RemoveAt(0); // Trim oldest line
+                }
+                continue; // Skip adding the empty line
+            }
+
+            // update last line with new text
+            transcriptions[transcriptions.Count - 1] = text;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StopTranscription()
+    {
+        await TranscriptionService.StopTranscriptionAsync();
+    }
+}
