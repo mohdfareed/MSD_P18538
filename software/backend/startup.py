@@ -10,9 +10,6 @@ from rich.logging import RichHandler
 
 LOGGER = logging.getLogger(__name__)
 
-HOST = "localhost"
-PORT = 8000
-
 backend = os.path.dirname(os.path.realpath(__file__))
 logging_dir = os.path.join(backend, "logs")
 
@@ -42,8 +39,8 @@ def main(debug=False):
     try:  # start server
         uvicorn.run(
             "app.main:app",
-            host=HOST,
-            port=PORT,
+            host=os.getenv("HOSTNAME", ""),
+            port=int(os.getenv("PORT") or 0),
             reload=debug,
             log_config=None,
         )
