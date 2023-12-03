@@ -17,10 +17,7 @@ def main(debug=False):
         log (bool): Whether to log to a file in addition to the console.
     """
 
-    load_dotenv()
-    os.environ["DEBUG"] = str(debug)
-    setup_logging(debug)
-
+    setup_environment(debug)
     try:  # start server
         uvicorn.run(  # TODO: check other uvicorn options
             "app.main:app",
@@ -34,7 +31,10 @@ def main(debug=False):
         exit(1)
 
 
-def setup_logging(debug):
+def setup_environment(debug):
+    load_dotenv()
+    os.environ["DEBUG"] = str(debug)
+
     import app
 
     LOGGER.info(f"Logging to files at: {os.path.dirname(app.logging_file)}/")
