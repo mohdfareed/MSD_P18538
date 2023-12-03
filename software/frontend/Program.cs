@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.AspNetCore.Cors;
 using Frontend;
 using MudBlazor.Services;
 
@@ -17,17 +16,6 @@ builder.Services.AddMudServices();
 var settings = new Models.GlobalSettings();
 builder.Configuration.Bind(settings);
 builder.Services.AddSingleton(settings);
-
-// cors
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("CorsPolicy", builder =>
-    {
-        builder.WithOrigins(settings.BackendBaseAddress)
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
-});
 
 var app = builder.Build();
 await app.RunAsync();

@@ -50,11 +50,6 @@ def main(debug=False):
 
 
 def setup_logging(debug: bool):
-    # configure logging
-    logging.captureWarnings(True)
-    root_logger = logging.getLogger()
-    root_logger.level = logging.DEBUG if debug else logging.INFO
-
     # setup console logger
     console_handler = RichHandler(
         markup=True,
@@ -65,15 +60,19 @@ def setup_logging(debug: bool):
         rich_tracebacks=True,
     )
     console_handler.setFormatter(console_formatter)
-    root_logger.addHandler(console_handler)
 
     # setup file logger
     os.makedirs(logging_dir, exist_ok=True)
     filename = f"{datetime.now():%y%m%d_%H%M%S}.log"
     file_handler = logging.FileHandler(os.path.join(logging_dir, filename))
     file_handler.setFormatter(file_formatter)
-    root_logger.addHandler(file_handler)
 
+    # configure logging
+    logging.captureWarnings(True)
+    logging.basicConfig(
+        handlers=[console_handler, file_handler],
+        level=logging.DEBUG if debug else logging.INFO,
+    )
     LOGGER.info(f"Logging to file: {filename}")
     LOGGER.debug("Debug mode enabled") if debug else None
 
