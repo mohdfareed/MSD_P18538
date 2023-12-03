@@ -16,7 +16,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL")
 LOGGER = logging.getLogger(__name__)
 app_dir = os.path.dirname(os.path.realpath(__file__))
 logging_file = os.path.join(os.path.dirname(app_dir), "logs", "backend.log")
-debug = bool(os.getenv("DEBUG", False))
+debug = os.getenv("DEBUG", "False").lower() == "true"
 
 # logging formats
 console_formatter = logging.Formatter(

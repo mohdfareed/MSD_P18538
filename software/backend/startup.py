@@ -34,11 +34,10 @@ def main(debug=False):
 def setup_environment(debug):
     load_dotenv()
     os.environ["DEBUG"] = str(debug)
-
     import app
 
     LOGGER.info(f"Logging to files at: {os.path.dirname(app.logging_file)}/")
-    LOGGER.debug("Debug mode enabled") if debug else None
+    LOGGER.debug("Debug mode enabled")
 
 
 if __name__ == "__main__":
