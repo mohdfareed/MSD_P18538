@@ -9,7 +9,7 @@ from ..services.transcription import engines as recognition_engines
 
 router = APIRouter()
 _running = False  # whether transcription is running
-# REVIEW: should there only be a single transcription instance?
+# TODO: review whether a single transcription instance is enough
 
 
 @router.get("/transcription/", status_code=status.HTTP_200_OK)
@@ -45,14 +45,13 @@ async def _transcription():
 
     source = transcription.sr.Microphone(sample_rate=16000)
     recognizer = recognition_engines.whisper_recognize
-
-    try:
+    try:  # start transcription
         async for transcript in transcription.transcribe(source, recognizer):
+            yield transcript
             if not _running:
                 break
-            yield transcript
     except asyncio.CancelledError or GeneratorExit or KeyboardInterrupt:
-        LOGGER.warning("Transcription interrupted")
-    finally:
-        LOGGER.info("Transcription stopped")
+        LOGGER.info("Transcription interrupted")
+    finally:  # cleanup
+        LOGGER.debug("Transcription stopped")
         _running = False

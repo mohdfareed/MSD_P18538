@@ -46,11 +46,11 @@ async def transcribe(
     transcription = _transcribe(recordings, recognizer, data_event)
     try:  # transcribe the audio
         async for transcript in transcription:
-            await asyncio.sleep(0)  # important for multithreading
             yield transcript
+            await asyncio.sleep(0)  # important for multithreading
     finally:
-        transcription.aclose()  # close generator
         stopper()  # stop listening
+        transcription.aclose()  # close generator
 
 
 async def _transcribe(
