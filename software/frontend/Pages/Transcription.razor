@@ -3,11 +3,10 @@
 @using MudBlazor
 
 <PageTitle>Transcription</PageTitle>
-<MudText Typo="Typo.h3">Live Transcription</MudText>
+<MudText Typo="Typo.h3" Class="mb-3">Live Transcription</MudText>
 <MudCard>
-    <MudCardContent>
-        <MudTextField T="string" ReadOnly="true" Variant="Variant.Outlined" Multiline="true"
-            Lines="MaxTranscriptionLines" Text="@(string.Join(' ', transcriptions))" />
+    <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
+        <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>
     </MudCardContent>
     <MudCardActions>
         @if (isTranscribing)
@@ -24,7 +23,6 @@
 </MudCard>
 
 @code {
-    private const int MaxTranscriptionLines = 10;
     private List<string> transcriptions = new List<string> { "" };
     private bool isTranscribing = false;
 
@@ -37,7 +35,7 @@
             if (string.IsNullOrWhiteSpace(text) && !string.IsNullOrWhiteSpace(transcriptions[^1]))
             {
                 transcriptions.Add(""); // Add new line
-                if (transcriptions.Count > MaxTranscriptionLines)
+                if (transcriptions.Count > 1000)
                 {
                     transcriptions.RemoveAt(0); // Trim oldest line
                 }
