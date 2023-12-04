@@ -5,7 +5,10 @@
   (paper "A4")
 
   (title_block
-    (date "15 nov 2012")
+    (title "Raspberrypi Motor and power Hat")
+    (date "2023-11-15")
+    (rev "V0.0.1")
+    (company "RIT MSD Team 18538")
   )
 
   (lib_symbols
@@ -1309,10 +1312,6 @@
     (uuid f9e11340-14c0-4808-933b-bc348b73b18e)
   )
 
-  (text "Additional pin functions:\nhttps://pinout.xyz/" (at 179.07 180.34 0)
-    (effects (font (size 1.27 1.27)) (justify left bottom))
-    (uuid 36e2c557-2c2a-4fba-9b6f-1167ab8ec281)
-  )
   (text "ID_SD and ID_SC PINS:\nThese pins are reserved for HAT ID EEPROM.\n\nAt boot time this I2C interface will be\ninterrogated to look for an EEPROM\nthat identifes the attached board and\nallows automagic setup of the GPIOs\n(and optionally, Linux drivers).\n\nBridging JP1 enables write protection.\n\nDO NOT USE these pins for anything other\nthan attaching an I2C ID EEPROM. Leave\nunconnected if ID EEPROM not required."
     (at 16.51 193.04 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
