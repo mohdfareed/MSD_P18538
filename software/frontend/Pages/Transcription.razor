@@ -4,36 +4,37 @@
 
 <PageTitle>Transcription</PageTitle>
 <MudText Typo="Typo.h3">Live Transcription</MudText>
-
 <MudCard>
     <MudCardContent>
-        <MudText>@((MarkupString)string.Join("<br />", transcriptions))</MudText>
+        <MudTextField T="string" ReadOnly="true" Variant="Variant.Outlined" Multiline="true"
+            Lines="MaxTranscriptionLines" Text="@(string.Join(' ', transcriptions))" />
     </MudCardContent>
-
     <MudCardActions>
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(async () =>
-            await StartTranscription())">Start</MudButton>
-        <MudSpacer />
-        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@(() =>
-            StopTranscription())">Stop</MudButton>
+        @if (isTranscribing)
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
+                OnClick="@(async () => await TranscriptionService.StopTranscriptionAsync())">Transcribing...</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Error"
+                OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
+        }
     </MudCardActions>
 </MudCard>
 
 @code {
     private const int MaxTranscriptionLines = 10;
-    private List<string> transcriptions = new List<string>();
-    private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+    private List<string> transcriptions = new List<string> { "" };
+    private bool isTranscribing = false;
 
     private async Task StartTranscription()
     {
-        var transcription = TranscriptionService.GetTranscriptionStreamAsync(
-        cancellationTokenSource.Token);
-
-        transcriptions.Add(""); // Add first line
-        await foreach (var text in transcription)
+        isTranscribing = true;
+        await foreach (var text in TranscriptionService.GetTranscriptionStreamAsync())
         {
             // check if a new phrase is starting
-            if (string.IsNullOrWhiteSpace(text))
+            if (string.IsNullOrWhiteSpace(text) && !string.IsNullOrWhiteSpace(transcriptions[^1]))
             {
                 transcriptions.Add(""); // Add new line
                 if (transcriptions.Count > MaxTranscriptionLines)
@@ -47,12 +48,6 @@
             transcriptions[^1] = text;
             StateHasChanged();
         }
-    }
-
-    private void StopTranscription()
-    {
-        cancellationTokenSource.Cancel();
-        cancellationTokenSource.Dispose();
-        cancellationTokenSource = new CancellationTokenSource();
+        isTranscribing = false;
     }
 }
