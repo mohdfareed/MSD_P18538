@@ -26,6 +26,7 @@ async def start_transcription():
     _cancellation_token.clear()
 
     async def _transcription():
+        global _transcriber
         try:
             async for transcript in _transcriber:  # type: ignore
                 yield transcript
