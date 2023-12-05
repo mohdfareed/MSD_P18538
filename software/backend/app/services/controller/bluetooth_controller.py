@@ -13,7 +13,6 @@ pygame.joystick.init()
 controllers = [
     pygame.joystick.Joystick(x) for x in range(pygame.joystick.get_count())
 ]
-print("Connected controllers: ", controllers)
 
 
 def start():

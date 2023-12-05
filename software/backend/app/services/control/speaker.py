@@ -1,10 +1,8 @@
-import logging
-
 import pygame
 
-LOGGER = logging.getLogger(__name__)
+from . import LOGGER
 
-# Initialize Pygame Mixer
+# initialize Pygame Mixer
 pygame.mixer.init()
 # list of sound files
 sounds = []

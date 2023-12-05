@@ -1,7 +1,11 @@
-# Control Software
+# Backend
 
-This program is responsible for controlling the robot. It is written in Python
-and is designed to run on a Raspberry Pi 4.
+The backend of the project is responsible for the following:
+
+- Controlling the robot's hardware
+- Configuring the robot
+
+The project is written in Python, and uses the [FastAPI](https://fastapi.tiangolo.com/) framework to provide a REST API for interfacing with the robot.
 
 ## Requirements
 
@@ -9,72 +13,96 @@ and is designed to run on a Raspberry Pi 4.
 
 ## Development Setup
 
-```bash
-./setup.sh
-source .venv/bin/activate
+```sh
+./setup.sh # setup environment and installs dependencies
+source venv/bin/activate # activate virtual environment
+./startup.py --debug # start the backend server in debug mode
+```
+
+Test the backend by sending a request to the server:
+
+```sh
+curl -i -X GET http://localhost:8000/
+```
+
+Which results in the following response:
+
+```http
+HTTP/1.1 200 OK
+date: Sat, 02 Dec 2023 03:28:30 GMT
+server: uvicorn
+content-length: 21
+content-type: application/json
+
+{"message":"Running"}
 ```
 
 ## Design
 
+The backend is designed to be modular, with each component being responsible for a specific task. The following components are included:
+
+- **Interfaces**: They are responsible for providing a method of communication with the backend; captures user commands and sends them to the backend, and displays responses from the backend. These can include a web interface, a command-line interface, or a wireless controller.
+- **Routers**: These are the endpoints that the frontend communicates with. They are responsible for translating frontend commands into backend commands, and for returning responses to the frontend. They define the project's API.
+- **Services**: These are the components that are responsible for executing backend commands. They are responsible for controlling the robot's hardware, and for configuring the robot. These define the core logic of the project.
+
+```mermaid
+sequenceDiagram
+    user ->> frontend: Command
+    frontend ->> router: HTTP requests
+    router ->> service: Calls
+    service ->> hardware: Controls
+    hardware -->> service: Reports
+    service -->> router: Returns
+    router -->> frontend: Response
+    frontend -->> user: Response
+```
+
 ```mermaid
 classDiagram
-    class ControlPackage {
-        <<package>>
-    }
-    class main {
-        +main()
+    class backend {
+        +main.py
     }
 
-    class RobotPackage {
-        <<package>>
-    }
-    class Motor {
-        +move(speed)
-    }
-    class Servo {
-        +steer(angle)
-    }
-    class Speaker {
-        +play(filename)
+    class control {
+        +motor.py
+        +servo.py
+        +speaker.py
     }
 
-    class ControllerPackage {
-        <<package>>
-    }
-    class BluetoothController {
-        +connect()
-        +disconnect()
-        +start(config)
-        +stop()
+    class controllers {
+        +bluetooth.py
+        +wifi.py
     }
 
-    class AudioPackage {
-        <<package>>
-    }
-    class Transcription {
-        +transcriber Recognizer
-        +transcribe(Queue recordings)
-    }
-    class Core {
-        +recordings Queue[AudioData]
-        +source Microphone
-        +startup()
-        +record()
+    class routers {
+        +control.py
+        +system.py
     }
 
-    ControlPackage --> main : contains
-    main --> RobotPackage : uses
-    main --> ControllerPackage : uses
-    main --> AudioPackage : uses
-    RobotPackage --> Motor : contains
-    RobotPackage --> Servo : contains
-    RobotPackage --> Speaker : contains
-    ControllerPackage --> BluetoothController : contains
-    AudioPackage --> Transcription : contains
-    AudioPackage --> Core : contains
+    class transcription {
+        +engines.py
+        +transcribe(source, engine): str[]
+    }
+
+    backend --|> control : includes
+    backend --|> routers : includes
+    backend --|> transcription : includes
+    backend --|> controllers : includes
+    routers ..> control : interacts with
+    routers ..> transcription : interacts with
+    routers ..> controllers : interacts with
+
+    control --|> motor : includes
+    control --|> servo : includes
+    control --|> speaker : includes
+    controllers --|> bluetooth : includes
+    controllers --|> wifi : includes
+    transcription --|> engines : includes
 ```
 
 ### Live Transcription
+
+Live transcription is a feature that allows the robot to transcribe speech in real-time. It's implemented using the following components:
 
 ```mermaid
 flowchart LR
