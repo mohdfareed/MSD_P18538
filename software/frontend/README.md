@@ -41,8 +41,24 @@ class TranscriptionService {
     +StopTranscriptionAsync()
 }
 
+class Transcription~UI~ {
+    -string[] transcriptions
+    -MudButton button
+    -MudText textBox
+}
 
+class GlobalSettings {
+    +string BackendBaseAddress
+}
+
+Transcription~UI~ --> TranscriptionService
+TranscriptionService --> GlobalSettings
 ```
+
+The diagram above shows an example of a `View` that uses a `Service` to interact with the backend. The `TranscriptionService` is responsible for interacting with the backend, and the `Transcription<UI>` is responsible for rendering the UI. The `Transcription<UI>` uses the `TranscriptionService` to interact with the backend. The `TranscriptionService` uses the `GlobalSettings` model to determine the address of the backend.
+
+> Note: The `<UI>` suffix is used to denote that the class is a UI component (view tier).
+> Note: The `GlobalSettings` model is maintained automatically by the [Options pattern](https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/options?view=aspnetcore-5.0).
 
 ### File Structure
 
