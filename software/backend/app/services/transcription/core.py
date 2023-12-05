@@ -17,7 +17,7 @@ PHRASE_TERMINATOR = "\n"
 _PHRASE_TIMEOUT = 2.5  #  the maximum pause between phrases (seconds)
 _RECORD_TIMEOUT = 0.5  # the maximum recording chunk size (seconds)
 _MAX_RECORD_DURATION = 5  # the maximum recording duration (seconds)
-_MIN_RECORD_DURATION = 0.15  # the minimum recording duration (seconds)
+_MIN_RECORD_DURATION = 0.1  # the minimum recording duration (seconds)
 
 # configure the recorder
 recorder.energy_threshold = 1000
@@ -46,11 +46,11 @@ async def transcribe(
     transcription = _transcribe(recordings, recognizer, data_event)
     try:  # transcribe the audio
         async for transcript in transcription:
-            await asyncio.sleep(0)  # important for multithreading
             yield transcript
+            await asyncio.sleep(0)  # important for multithreading
     finally:
-        transcription.aclose()  # close generator
         stopper()  # stop listening
+        transcription.aclose()  # close generator
 
 
 async def _transcribe(
@@ -87,8 +87,10 @@ async def _transcribe(
             if len(phrase_buffer) > sample_rate * _MAX_RECORD_DURATION:
                 phrase_time = datetime.min  # start a new phrase
                 break  # stop if the buffer is too large
-            if len(phrase_buffer) < sample_rate * _MIN_RECORD_DURATION:
-                continue  # wait for more audio data
+
+        # check if the buffer is too small
+        if len(phrase_buffer) < sample_rate * _MIN_RECORD_DURATION:
+            continue  # wait for more audio data (api minimum is 0.1s)
 
         try:  # transcribe the audio
             audio_data = sr.AudioData(phrase_buffer, sample_rate, sample_width)

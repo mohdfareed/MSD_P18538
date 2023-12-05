@@ -1,56 +1,51 @@
 import asyncio
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import StreamingResponse
 
+from ..services.transcription import LOGGER
 from ..services.transcription import core as transcription
 from ..services.transcription import engines as recognition_engines
 
 router = APIRouter()
+_transcriber = None  # active transcription generator
+_cancellation_token = asyncio.Event()
 
-_transcriber = None  # the transcription generator
 
-
-@router.post("/transcription/", status_code=status.HTTP_200_OK)
-async def transcribe():
+@router.get("/transcription/", status_code=status.HTTP_200_OK)
+async def start_transcription():
     global _transcriber
-
-    if not _transcriber:
-        _transcriber = asyncio.create_task(_start_transcription())
-        return {"message": "Transcription started"}
-    else:
+    if _transcriber is not None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Transcription already running",
+            status_code=400, detail="Transcription already running"
         )
-
-
-@router.delete("/transcription/", status_code=status.HTTP_200_OK)
-async def stop():
-    global _transcriber
-
-    if _transcriber:
-        _transcriber.cancel()
-        return {"message": "Transcription stopped"}
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Transcription not running",
-        )
-
-
-async def _start_transcription():
-    global _transcriber
 
     source = transcription.sr.Microphone(sample_rate=16000)
     recognizer = recognition_engines.whisper_recognize
+    _transcriber = transcription.transcribe(source, recognizer)
+    _cancellation_token.clear()
 
-    try:
-        async for transcript in transcription.transcribe(source, recognizer):
-            if transcript == transcription.PHRASE_TERMINATOR:
-                print()  # start a new line for a new phrase
-            # clear line and print transcription
-            print(transcript, end="\r", flush=True)
-    except asyncio.CancelledError:
-        print("\nTranscription stopped")
-    finally:
-        _transcriber = None
+    async def _transcription():
+        global _transcriber
+        try:
+            async for transcript in _transcriber:  # type: ignore
+                yield transcript
+                if _cancellation_token.is_set():
+                    break
+        except asyncio.CancelledError or GeneratorExit or KeyboardInterrupt:
+            LOGGER.debug("Transcription interrupted")
+        finally:
+            LOGGER.debug("Transcription stopped")
+            _transcriber = None
+
+    return StreamingResponse(_transcription())
+
+
+@router.delete("/transcription/", status_code=status.HTTP_200_OK)
+async def stop_transcription():
+    global _transcriber
+    if _transcriber is None:
+        raise HTTPException(
+            status_code=400, detail="Transcription not running"
+        )
+    _cancellation_token.set()

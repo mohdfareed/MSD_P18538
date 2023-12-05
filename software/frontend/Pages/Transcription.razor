@@ -1,0 +1,51 @@
+@page "/transcription"
+@inject Services.TranscriptionService TranscriptionService
+@using MudBlazor
+
+<PageTitle>Transcription</PageTitle>
+<MudText Typo="Typo.h3" Class="mb-3">Live Transcription</MudText>
+<MudCard>
+    <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
+        <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>
+    </MudCardContent>
+    <MudCardActions>
+        @if (isTranscribing)
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
+                OnClick="@(async () => await TranscriptionService.StopTranscriptionAsync())">Transcribing...</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Error"
+                OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
+        }
+    </MudCardActions>
+</MudCard>
+
+@code {
+    private List<string> transcriptions = new List<string> { "" };
+    private bool isTranscribing = false;
+
+    private async Task StartTranscription()
+    {
+        isTranscribing = true;
+        await foreach (var text in TranscriptionService.GetTranscriptionStreamAsync())
+        {
+            // check if a new phrase is starting
+            if (string.IsNullOrWhiteSpace(text) && !string.IsNullOrWhiteSpace(transcriptions[^1]))
+            {
+                transcriptions.Add(""); // Add new line
+                if (transcriptions.Count > 1000)
+                {
+                    transcriptions.RemoveAt(0); // Trim oldest line
+                }
+                continue; // Skip adding the empty line
+            }
+
+            // update last line with new text
+            transcriptions[^1] = text;
+            StateHasChanged();
+        }
+        isTranscribing = false;
+    }
+}

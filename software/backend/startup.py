@@ -2,31 +2,11 @@
 
 import logging
 import os
-from datetime import datetime
 
 import uvicorn
 from dotenv import load_dotenv
-from rich.logging import RichHandler
 
 LOGGER = logging.getLogger(__name__)
-
-HOST = "localhost"
-PORT = 8000
-
-backend = os.path.dirname(os.path.realpath(__file__))
-logging_dir = os.path.join(backend, "logs")
-
-# logging format
-console_formatter = logging.Formatter(
-    r"%(message)s [bright_black]- [italic]%(name)s[/italic] "
-    r"\[[underline]%(filename)s:%(lineno)d[/underline]]",
-    datefmt=r"%Y-%m-%d %H:%M:%S.%3f",
-)
-file_formatter = logging.Formatter(
-    r"[%(asctime)s.%(msecs)03d] %(levelname)-8s "
-    r"%(message)s - %(name)s [%(filename)s:%(lineno)d]",
-    datefmt=r"%Y-%m-%d %H:%M:%S",
-)
 
 
 def main(debug=False):
@@ -36,14 +16,13 @@ def main(debug=False):
         debug (bool): Whether to log debug messages.
         log (bool): Whether to log to a file in addition to the console.
     """
-    load_dotenv()
-    setup_logging(debug)
 
+    setup_environment(debug)
     try:  # start server
-        uvicorn.run(
+        uvicorn.run(  # TODO: check other uvicorn options
             "app.main:app",
-            host=HOST,
-            port=PORT,
+            host=os.getenv("HOST", ""),
+            port=int(os.getenv("PORT") or 0),
             reload=debug,
             log_config=None,
         )
@@ -52,33 +31,13 @@ def main(debug=False):
         exit(1)
 
 
-def setup_logging(debug: bool):
-    # configure logging
-    logging.captureWarnings(True)
-    root_logger = logging.getLogger()
-    root_logger.level = logging.DEBUG if debug else logging.INFO
+def setup_environment(debug):
+    load_dotenv()
+    os.environ["DEBUG"] = str(debug)
+    import app
 
-    # setup console logger
-    console_handler = RichHandler(
-        markup=True,
-        show_path=False,
-        log_time_format=console_formatter.datefmt,  # type: ignore
-        tracebacks_word_wrap=False,
-        tracebacks_show_locals=debug,
-        rich_tracebacks=True,
-    )
-    console_handler.setFormatter(console_formatter)
-    root_logger.addHandler(console_handler)
-
-    # setup file logger
-    os.makedirs(logging_dir, exist_ok=True)
-    filename = f"{datetime.now():%y%m%d_%H%M%S}.log"
-    file_handler = logging.FileHandler(os.path.join(logging_dir, filename))
-    file_handler.setFormatter(file_formatter)
-    root_logger.addHandler(file_handler)
-
-    LOGGER.info(f"Logging to file: {filename}")
-    LOGGER.debug("Debug mode enabled") if debug else None
+    LOGGER.info(f"Logging to files at: {os.path.dirname(app.logging_file)}/")
+    LOGGER.debug("Debug mode enabled")
 
 
 if __name__ == "__main__":

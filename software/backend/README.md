@@ -14,6 +14,7 @@ The project is written in Python, and uses the [FastAPI](https://fastapi.tiangol
 ## Development Setup
 
 ```sh
+cd software/backend # change directory to the backend
 ./setup.sh # setup environment and installs dependencies
 source venv/bin/activate # activate virtual environment
 ./startup.py --debug # start the backend server in debug mode
@@ -208,3 +209,22 @@ flowchart LR
 7. **Ongoing Transcription**: The transcriber continuously transcribes the audio, allowing for self-correction as new audio data is received.
 8. **Phrase Output**: Once a phrase is locked-in, it's emitted separately from the ongoing transcription.
 9. **Console Output**: The last transcription is continuously overwritten until a phrase separator is emitted, at which point a new line is started for a new phrase on the console.
+
+### File Structure
+
+The backend is structured as follows:
+
+```bash
+software/backend
+├── .env                # Environment variables
+├── setup.sh            # Setup script for development
+├── startup.py          # Entry point
+├── requirements.txt    # Dependencies
+├── logs                # Log files
+├── tests               # Unit tests
+└── app                 # Backend application
+    ├── main.py         # Backend entry point
+    ├── models          # Models of data (pydantic)
+    ├── controllers     # API endpoints
+    └── services        # Core logic
+```
