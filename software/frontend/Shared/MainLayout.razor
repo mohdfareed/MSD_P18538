@@ -6,10 +6,12 @@
 
 <MudLayout>
     <MudAppBar Elevation="0">
+        @* side panel *@
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
             OnClick="@((e) => DrawerToggle())" />
         <MudSpacer />
 
+        @* dark mode toggle *@
         @if (_isDarkMode)
         {
             <MudIconButton Icon="@Icons.Material.Filled.Brightness7" Color="Color.Inherit"
@@ -21,10 +23,9 @@
                 OnClick="@((e) => ToggleDarkMode())" />
         }
 
-        <MudIconButton Icon="@Icons.Custom.Brands.MudBlazor" Color="Color.Inherit" Href="https://mudblazor.com/"
-            Target="_blank" />
+        @* github link *@
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
-            Href="https://github.com/MudBlazor/MudBlazor/" Target="_blank" />
+            Href="https://github.com/BrianMonclus/MSD_P18538" Target="_blank" />
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
         <MudDrawerHeader>
