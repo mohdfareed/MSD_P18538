@@ -48,5 +48,9 @@ class WhisperEngine(RecognitionEngine):
     """A speech recognition engine that uses OpenAI's Whisper speech
     recognition engine."""
 
+    def __init__(self, recognizer: sr.Recognizer = sr.Recognizer()):
+        # TODO: add API key check
+        super().__init__(recognizer)
+
     def recognition_function(self, audio_data: sr.AudioData) -> str:
         return self.recognizer.recognize_whisper(audio_data)
