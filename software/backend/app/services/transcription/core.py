@@ -32,10 +32,13 @@ async def start_transcription(
     engine.
 
     Args:
-        source (Microphone): The microphone to record from.
+        engine (RecognitionEngine): The speech recognition engine.
+        mic_config (MicrophoneConfig): The microphone configuration.
+        mic_event (Event): The audio event triggered on new microphone data.
 
     Returns:
-        Transcription: The transcription service.
+        Tuple[Event[str], CancellationToken]: The transcription event and the
+            cancellation token.
     """
 
     # initialize transcription

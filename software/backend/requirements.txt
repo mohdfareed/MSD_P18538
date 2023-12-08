@@ -6,7 +6,7 @@ websockets # websocket server
 # transcription
 SpeechRecognition # speech recognition
 openai # whisper recognition engine
-pyaudio # device microphone
+pyaudio # device microphone and speaker interface
 
 # control
 gpiozero # raspberry pi gpio interface library

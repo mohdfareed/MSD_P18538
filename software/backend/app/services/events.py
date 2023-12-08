@@ -18,7 +18,7 @@ from typing import Any, Callable, Coroutine, Generic
 from typing_extensions import ParamSpec
 
 LOGGER = logging.getLogger(__name__)
-"""Events service logger."""
+"""Events system logger."""
 P = ParamSpec("P")  # event data type definition
 
 
