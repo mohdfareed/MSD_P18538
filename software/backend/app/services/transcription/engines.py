@@ -12,8 +12,11 @@ import speech_recognition as sr
 
 
 class RecognitionEngine(ABC):
-    """A speech recognition engine. This is an abstract class.
-    Subclasses are different speech recognition engines."""
+    """A speech recognition engine.
+
+    Provides an interface for converting audio date to text. It holds a speech
+    recognition engine from the SpeechRecognition library as the underlying
+    engine for speech recognition."""
 
     def __init__(self, recognizer: sr.Recognizer = sr.Recognizer()):
         self.recognizer = recognizer
@@ -28,7 +31,14 @@ class RecognitionEngine(ABC):
         Returns:
             str: The transcription of the audio.
         """
-        return await asyncio.to_thread(self.recognition_function, audio_data)
+        try:
+            return await asyncio.to_thread(
+                self.recognition_function, audio_data
+            )
+        except sr.UnknownValueError as e:
+            raise UnrecognizedAudioError from e
+        except sr.RequestError as e:
+            raise RecognitionEngineError from e
 
     @abstractmethod
     def recognition_function(self, audio_data: sr.AudioData) -> str:
@@ -54,3 +64,15 @@ class WhisperEngine(RecognitionEngine):
 
     def recognition_function(self, audio_data: sr.AudioData) -> str:
         return self.recognizer.recognize_whisper(audio_data)
+
+
+class RecognitionEngineError(Exception):
+    """An error raised by a recognition engine."""
+
+    ...
+
+
+class UnrecognizedAudioError(RecognitionEngineError):
+    """An error raised when the audio is not recognized."""
+
+    ...

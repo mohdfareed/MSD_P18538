@@ -1,124 +1,103 @@
 import asyncio
 from datetime import datetime, timedelta
-from typing import AsyncGenerator, Callable, Coroutine
 
 import speech_recognition as sr
 
-from . import LOGGER
+from ...models.microphone import MicrophoneConfig
+from ..events import CancellationToken, Event
+from . import LOGGER, recorder
+from .engines import (
+    RecognitionEngine,
+    RecognitionEngineError,
+    UnrecognizedAudioError,
+)
 
-# globals
-recorder: sr.Recognizer = sr.Recognizer()
-"""The speech recognition engine."""
+RECORD_TIMEOUT = 0.5
+"""The maximum audio recording chunk size (seconds)."""
+ENERGY_THRESHOLD = 1000
+"""The energy threshold for recording audio."""
+DYNAMIC_ENERGY_THRESHOLD = False
+"""Whether to dynamically adjust the energy threshold for recording audio."""
 
-# constants
 PHRASE_TERMINATOR = "\n"
 """The indicator of an end of a phrase."""
-
 _PHRASE_TIMEOUT = 2.5  #  the maximum pause between phrases (seconds)
-_RECORD_TIMEOUT = 0.5  # the maximum recording chunk size (seconds)
-_MAX_RECORD_DURATION = 5  # the maximum recording duration (seconds)
-_MIN_RECORD_DURATION = 0.1  # the minimum recording duration (seconds)
-
-# configure the recorder
-recorder.energy_threshold = 1000
-recorder.dynamic_energy_threshold = False
+_MIN_RECORD_DURATION = 0.5  # the minimum recording duration (seconds)
 
 
-async def transcribe(
-    source: sr.AudioSource,
-    recognizer: Callable[[sr.AudioData], Coroutine[None, None, str]],
-) -> AsyncGenerator[str, None]:
-    """Generate transcription of audio from a source using a recognition engine
-    progressively. Yields the transcription of the audio, separated as phrases.
+async def start_transcription(
+    engine: RecognitionEngine, mic_config: MicrophoneConfig, mic_event: Event
+):
+    """Start transcribing audio from a microphone using a speech recognition
+    engine.
 
     Args:
-        source (AudioSource): The audio source to record from.
-        recognizer (AudioData -> str): The recognition engine. Defaults to
-        Google's speech recognition engine.
+        source (Microphone): The microphone to record from.
 
-    Yields:
-        str: The transcription of the audio in the provided queue.
-        PHRASE_TERMINATOR indicates the start of a new phrase.
+    Returns:
+        Transcription: The transcription service.
     """
 
-    # start listening in the background
-    recordings, data_event, stopper = _record(source)
-    transcription = _transcribe(recordings, recognizer, data_event)
-    try:  # transcribe the audio
-        async for transcript in transcription:
-            yield transcript
-            await asyncio.sleep(0)  # important for multithreading
-    finally:
-        stopper()  # stop listening
-        transcription.aclose()  # close generator
+    # initialize transcription
+    transcript_event = Event[str]()
+    handler = await _create_transcription_handler(mic_config, engine)
+    # start recording and transcribing
+    record_event, record_token = recorder.start_recorder(
+        engine, mic_config, mic_event
+    )
+    await record_event.subscribe(handler)
+
+    async def stop():  # stop recording and transcribing
+        await record_event.unsubscribe(handler)
+        record_token()
+
+    return transcript_event, CancellationToken(stop)
 
 
-async def _transcribe(
-    recordings: asyncio.Queue[sr.AudioData],
-    recognizer: Callable[[sr.AudioData], Coroutine[None, None, str]],
-    data_event: asyncio.Event,
-) -> AsyncGenerator[str, None]:
+async def _create_transcription_handler(
+    mic_config: MicrophoneConfig, engine: RecognitionEngine
+):
+    transcript_event = Event[str]()
     phrase_time = datetime.min  # last time new audio was received
-    phrase_buffer = bytes()  # buffer of current (incomplete) phrase audio
-    sample_rate = 0  # the sample rate of the audio
-    sample_width = 0  # the sample width of the audio
+    phrase_buffer = bytes()  # buffer of incomplete phrase audio
+    # mutex locks
+    time_lock = asyncio.Lock()
+    buffer_lock = asyncio.Lock()
 
-    while True:  # wait for new audio data
-        if recordings.empty():
-            await data_event.wait()
-            data_event.clear()
+    async def handler(audio_data: sr.AudioData):
+        nonlocal phrase_time, phrase_buffer
 
         # check for a new phrase (pause in speech)
-        now = datetime.utcnow()
-        if now - phrase_time > timedelta(seconds=_PHRASE_TIMEOUT):
-            phrase_buffer = bytes()
-            yield PHRASE_TERMINATOR  # indicate a pause between phrases
-        phrase_time = now  # update last time new audio was received
+        async with time_lock:
+            now = datetime.utcnow()
+            if now - phrase_time > timedelta(seconds=_PHRASE_TIMEOUT):
+                # indicate a pause between phrases
+                await transcript_event.trigger(PHRASE_TERMINATOR)
+                phrase_buffer = bytes()
+            phrase_time = now  # update last time new audio was received
 
-        # build phrase audio data
-        while not recordings.empty():
-            audio_data = await recordings.get()
-            if not sample_rate or not sample_width:
-                sample_rate = audio_data.sample_rate
-                sample_width = audio_data.sample_width
-
-            # add audio data to buffer
+        # add audio data to buffer
+        async with buffer_lock:
             phrase_buffer += audio_data.get_raw_data()
-            if len(phrase_buffer) > sample_rate * _MAX_RECORD_DURATION:
-                phrase_time = datetime.min  # start a new phrase
-                break  # stop if the buffer is too large
-
-        # check if the buffer is too small
-        if len(phrase_buffer) < sample_rate * _MIN_RECORD_DURATION:
-            continue  # wait for more audio data (api minimum is 0.1s)
+            if (  # check if the buffer is too small
+                len(phrase_buffer)
+                < mic_config.sample_rate * _MIN_RECORD_DURATION
+            ):  #  wait for more audio data (api minimum is 0.1s)
+                return
 
         try:  # transcribe the audio
-            audio_data = sr.AudioData(phrase_buffer, sample_rate, sample_width)
-            yield await recognizer(audio_data)
-        except sr.UnknownValueError:
-            continue  # unrecognized audio
-        except sr.RequestError as e:
-            LOGGER.warning("Transcription failed: %s", e)
-            continue  # recognition engine error
+            audio_data = sr.AudioData(
+                phrase_buffer,
+                mic_config.sample_rate,
+                mic_config.sample_width,
+            )
+            # broadcast the transcript
+            await transcript_event.trigger(await engine.recognize(audio_data))
 
+        except UnrecognizedAudioError:
+            return  # wait for more audio data
+        except RecognitionEngineError as e:
+            LOGGER.exception(f"Error recognizing audio: {e}")
+            return
 
-def _record(source: sr.AudioSource = sr.Microphone(sample_rate=16000)):
-    recordings: asyncio.Queue[sr.AudioData] = asyncio.Queue()
-    new_data_event = asyncio.Event()
-    main_loop = asyncio.get_event_loop()
-
-    with source:  # adjust for ambient noise
-        LOGGER.debug("Adjusting listener for ambient noise")
-        recorder.adjust_for_ambient_noise(source)
-
-    def callback(_, audio: sr.AudioData):
-        # add audio data to the queue and trigger new data event
-        asyncio.run_coroutine_threadsafe(recordings.put(audio), main_loop)
-        main_loop.call_soon_threadsafe(new_data_event.set)
-
-    stopper = recorder.listen_in_background(
-        source, callback, phrase_time_limit=_RECORD_TIMEOUT
-    )  # start listening in the background
-
-    # stopper is a function that stops the background listening
-    return recordings, new_data_event, stopper
+    return handler

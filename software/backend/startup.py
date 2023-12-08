@@ -13,8 +13,7 @@ def main(debug=False):
     """Starts the backend server and sets up logging.
 
     Args:
-        debug (bool): Whether to log debug messages.
-        log (bool): Whether to log to a file in addition to the console.
+        debug (bool): Whether to start in debug mode and log debug messages.
     """
 
     setup_environment(debug)

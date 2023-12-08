@@ -1,6 +1,5 @@
 # rest api
 fastapi # rest api framework
-pydantic # data validation
 uvicorn # asgi server
 websockets # websocket server
 

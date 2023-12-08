@@ -1,51 +1,67 @@
 import asyncio
+import logging
 
-from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi.websockets import WebSocketState
 
-from ..services.transcription import LOGGER
-from ..services.transcription import core as transcription
-from ..services.transcription import engines as recognition_engines
+from ..services import microphone, transcription
+from ..services.events import Event
+
+LOGGER = logging.getLogger(__name__)
 
 router = APIRouter()
-_transcriber = None  # active transcription generator
-_cancellation_token = asyncio.Event()
+_transcription: Event[str] | None = None  # transcription event
 
 
-@router.get("/transcription/", status_code=status.HTTP_200_OK)
-async def start_transcription():
-    global _transcriber
-    if _transcriber is not None:
-        raise HTTPException(
-            status_code=400, detail="Transcription already running"
-        )
+@router.websocket("/transcription/stream")
+async def stream_transcription(websocket: WebSocket):
+    global _transcription
+    assert _transcription is not None, "Transcription service is not running"
+    await websocket.accept()
 
-    source = transcription.sr.Microphone(sample_rate=16000)
-    recognizer = recognition_engines.whisper_recognize
-    _transcriber = transcription.transcribe(source, recognizer)
-    _cancellation_token.clear()
+    async def broadcast(transcript: str):
+        """Broadcast a transcript to a client."""
+        try:  # try to send transcript to client
+            await websocket.send_bytes(str(transcript).encode())
+        except WebSocketDisconnect:  # client disconnected
+            pass
 
-    async def _transcription():
-        global _transcriber
-        try:
-            async for transcript in _transcriber:  # type: ignore
-                yield transcript
-                if _cancellation_token.is_set():
-                    break
-        except asyncio.CancelledError or GeneratorExit or KeyboardInterrupt:
-            LOGGER.debug("Transcription interrupted")
-        finally:
-            LOGGER.debug("Transcription stopped")
-            _transcriber = None
+    await _transcription.subscribe(callback=broadcast)
+    LOGGER.warning("Transcription client connected")
 
-    return StreamingResponse(_transcription())
+    # keep websocket alive
+    while websocket.client_state == WebSocketState.CONNECTED:
+        await asyncio.sleep(1)
+
+    LOGGER.warning("Transcription client disconnected")
+    await _transcription.unsubscribe(callback=broadcast)
 
 
-@router.delete("/transcription/", status_code=status.HTTP_200_OK)
-async def stop_transcription():
-    global _transcriber
-    if _transcriber is None:
-        raise HTTPException(
-            status_code=400, detail="Transcription not running"
-        )
-    _cancellation_token.set()
+@router.websocket("/transcription/start")
+async def start_transcription(websocket: WebSocket):
+    global _transcription
+    assert _transcription is None, "Transcription service is already running"
+    await websocket.accept()
+
+    # create microphone
+    (
+        mic_event,
+        mic_config,
+        mic_token,
+    ) = await microphone.start_websocket_microphone(websocket)
+
+    # start transcription
+    engine = transcription.engines.WhisperEngine()
+    (
+        _transcription,
+        transcription_token,
+    ) = await transcription.start_transcription(engine, mic_config, mic_event)
+
+    # keep websocket alive
+    while websocket.client_state == WebSocketState.CONNECTED:
+        await asyncio.sleep(1)
+
+    # stop transcription
+    _transcription = None
+    transcription_token()
+    mic_token()

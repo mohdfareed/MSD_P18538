@@ -1,5 +1,5 @@
 """
-Events service. This is used to process outputs from services asynchronously.
+Events system. This is used to process outputs from services asynchronously.
 
 Callback functions can be registered to an event. When the event is triggered,
 all registered callbacks are called asynchronously. Callbacks either be
@@ -13,7 +13,7 @@ the main thread. This is useful for services that require long running tasks.
 
 import asyncio
 import logging
-from typing import Callable, Coroutine, Generic
+from typing import Any, Callable, Coroutine, Generic
 
 from typing_extensions import ParamSpec
 
@@ -34,12 +34,21 @@ class Event(Generic[P]):
 
     async def subscribe(self, callback: Callable[P, Coroutine] | Coroutine):
         """Subscribe to the event."""
+        assert not self.is_subscribed(callback) and (
+            asyncio.iscoroutinefunction(callback)
+            or asyncio.iscoroutine(callback)
+        ), f"Event handler '{callback}' is of invalid type"
+
         async with self._handlers_lock:
             LOGGER.debug(f"Handler {callback} subscribing to event '{self}'")
-            self.handlers.add(callback)
+            self.handlers.add(callback)  # type: ignore
 
     async def unsubscribe(self, callback: Callable[P, Coroutine] | Coroutine):
         """Unsubscribe from the event."""
+        assert self.is_subscribed(
+            callback
+        ), f"Event handler '{callback}' is not subscribed to event '{self}'"
+
         async with self._handlers_lock:
             LOGGER.debug(
                 f"Handler {callback} unsubscribing from event '{self}'"
@@ -58,6 +67,13 @@ class Event(Generic[P]):
                 await self._execute_handler(handler, *args, **kwargs)
         self.trigger_event.clear()
 
+    async def is_subscribed(
+        self, callback: Callable[P, Coroutine] | Coroutine
+    ) -> bool:
+        """Check if a callback is subscribed to the event."""
+        async with self._handlers_lock:
+            return callback in self.handlers
+
     async def until_triggered(self):
         """Wait until the event is triggered."""
         await self.trigger_event.wait()
@@ -68,7 +84,22 @@ class Event(Generic[P]):
             asyncio.create_task(handler(*args, **kwargs))
         elif asyncio.iscoroutine(handler):
             asyncio.create_task(handler)
-        else:  # only allow coroutines
-            raise TypeError(
-                f"Event handler '{handler}' is not a coroutine or coroutine function"
-            )
+
+
+class CancellationToken:
+    """A task cancellation token. Signals cancellation of a task when called."""
+
+    def __init__(self, callback: Callable | Coroutine, *args: Any):
+        self.callback = callback
+        """The callback to call when the token is called."""
+        self.args = args
+        """The arguments to pass to the callback."""
+
+    def __call__(self):
+        """Call the cancellation token."""
+        if asyncio.iscoroutinefunction(self.callback):
+            asyncio.create_task(self.callback(*self.args))
+        elif asyncio.iscoroutine(self.callback):
+            asyncio.create_task(self.callback)
+        else:
+            self.callback(*self.args)  # type: ignore
