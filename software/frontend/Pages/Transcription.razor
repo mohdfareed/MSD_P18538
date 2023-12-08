@@ -12,7 +12,7 @@
         @if (isTranscribing)
         {
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
-                OnClick="@(transcriptionCancellationTokenSource.Cancel)">Transcribing...</MudButton>
+                OnClick="@(transcriptionCTS.Cancel)">Transcribing...</MudButton>
         }
         else
         {
@@ -22,7 +22,7 @@
         @if (isRecording)
         {
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Warning"
-                OnClick="@(recordingCancellationTokenSource.Cancel)">Recording...</MudButton>
+                OnClick="@(recordingCTS.Cancel)">Recording...</MudButton>
         }
         else
         {
@@ -38,31 +38,32 @@
     private List<string> transcriptions = new List<string> { "" };
     private bool isTranscribing = false;
     private bool isRecording = false;
-    private CancellationTokenSource transcriptionCancellationTokenSource = new CancellationTokenSource();
-    private CancellationTokenSource recordingCancellationTokenSource = new CancellationTokenSource();
+
+    private CancellationTokenSource transcriptionCTS = new();
+    private CancellationTokenSource recordingCTS = new();
 
     private async Task StartTranscription()
     {
-        isTranscribing = true;
-        transcriptionCancellationTokenSource.Cancel();
-        transcriptionCancellationTokenSource = new CancellationTokenSource();
-        transcriptionCancellationTokenSource.Token.Register(() => { isTranscribing = false; StateHasChanged(); });
-        var transcriber = TranscriptionService.ReceiveTextStreamAsync(transcriptionCancellationTokenSource.Token);
-        await foreach (var text in transcriber)
-        {
-            OnTranscriptionReceived(text);
-        }
-        transcriptionCancellationTokenSource.Cancel();
+        transcriptionCTS.Cancel();
+        transcriptionCTS = new CancellationTokenSource();
+        transcriptionCTS.Token.Register(() => isTranscribing = false);
+
+        isTranscribing = true; StateHasChanged();
+        await TranscriptionService.ReceiveTextStreamAsync(OnTranscriptionReceived, transcriptionCTS.Token);
+        transcriptionCTS.Cancel();
     }
 
     public async Task StartRecording()
     {
+        recordingCTS.Cancel();
+        recordingCTS = new CancellationTokenSource();
+        recordingCTS.Token.Register(() =>
+        {
+            isRecording = false; StateHasChanged();
+        });
+
         isRecording = true;
-        recordingCancellationTokenSource.Cancel();
-        recordingCancellationTokenSource = new CancellationTokenSource();
-        recordingCancellationTokenSource.Token.Register(() => { isRecording = false; StateHasChanged(); });
-        await TranscriptionService.StartAudioStreamingAsync(recordingCancellationTokenSource.Cancel,
-        recordingCancellationTokenSource.Token);
+        await TranscriptionService.StartAudioStreamingAsync(recordingCTS.Cancel, recordingCTS.Token);
     }
 
 
@@ -71,11 +72,8 @@
         // check if a new phrase is starting
         if (string.IsNullOrWhiteSpace(text) && !string.IsNullOrWhiteSpace(transcriptions[^1]))
         {
-            transcriptions.Add(""); // Add new line
-            if (transcriptions.Count > 1000)
-            {
-                transcriptions.RemoveAt(0); // Trim oldest line
-            }
+            transcriptions.Add(""); // Cycle to a new line
+            if (transcriptions.Count > 1000) transcriptions.RemoveAt(0);
             return; // Skip adding the empty line
         }
         // update last line with new text
