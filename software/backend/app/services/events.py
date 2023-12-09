@@ -9,6 +9,9 @@ are called without arguments when callbacks are coroutines.
 
 This allows long running tasks to be executed asynchronously without blocking
 the main thread. This is useful for services that require long running tasks.
+It can also be used an cancellation token to stop long running tasks by simply
+adding a cancellation callback to the event; triggering the event will cancel
+the task.
 """
 
 import asyncio
@@ -23,52 +26,45 @@ P = ParamSpec("P")  # event data type definition
 
 
 class Event(Generic[P]):
-    """An event. When triggered, all subscribers are notified."""
+    """An event. Calls a set of event handlers managed through a subscription
+    system. When triggered, all subscribers are notified."""
 
     def __init__(self):
-        self.handlers: set[Callable[P, Coroutine] | Coroutine] = set()
+        self.handlers: set[Callable[P, Any] | Coroutine] = set()
         """The handlers of the event."""
         self.trigger_event = asyncio.Event()
         """Event set for the duration of the event trigger."""
         self._handlers_lock = asyncio.Lock()
 
-    async def subscribe(self, callback: Callable[P, Coroutine] | Coroutine):
+    async def subscribe(self, callback: Callable[P, Any] | Coroutine):
         """Subscribe to the event."""
-        assert not await self.is_subscribed(callback) and (
-            asyncio.iscoroutinefunction(callback)
-            or asyncio.iscoroutine(callback)
+        assert not await self.is_subscribed(
+            callback
         ), f"Event handler '{callback}' is of invalid type"
 
         async with self._handlers_lock:
-            LOGGER.debug(f"Handler {callback} subscribing to event '{self}'")
-            self.handlers.add(callback)  # type: ignore
+            self.handlers.add(callback)
 
-    async def unsubscribe(self, callback: Callable[P, Coroutine] | Coroutine):
+    async def unsubscribe(self, callback: Callable[P, Any] | Coroutine):
         """Unsubscribe from the event."""
-        assert self.is_subscribed(
+        assert await self.is_subscribed(
             callback
         ), f"Event handler '{callback}' is not subscribed to event '{self}'"
 
         async with self._handlers_lock:
-            LOGGER.debug(
-                f"Handler {callback} unsubscribing from event '{self}'"
-            )
             self.handlers.remove(callback)
 
     async def trigger(self, *args: P.args, **kwargs: P.kwargs):
         """Trigger the event."""
         self.trigger_event.set()
         async with self._handlers_lock:
-            LOGGER.debug(
-                f"Triggering event '{self}' with arguments: {args}, {kwargs}"
-            )
             for handler in self.handlers:
                 LOGGER.debug(f"Executing handler '{handler}'")
                 await self._execute_handler(handler, *args, **kwargs)
         self.trigger_event.clear()
 
     async def is_subscribed(
-        self, callback: Callable[P, Coroutine] | Coroutine
+        self, callback: Callable[P, Any] | Coroutine
     ) -> bool:
         """Check if a callback is subscribed to the event."""
         async with self._handlers_lock:
@@ -79,27 +75,15 @@ class Event(Generic[P]):
         await self.trigger_event.wait()
 
     async def _execute_handler(self, handler, *args, **kwargs):
-        # execute event handler
+        # execute event handler asynchronously
         if asyncio.iscoroutinefunction(handler):
             asyncio.create_task(handler(*args, **kwargs))
         elif asyncio.iscoroutine(handler):
             asyncio.create_task(handler)
+            # unsubscribe in the background to avoid deadlocks
+            asyncio.create_task(self.unsubscribe(handler))
+        else:  # execute non-async handler in thread
+            asyncio.create_task(asyncio.to_thread(handler, *args, **kwargs))
 
-
-class CancellationToken:
-    """A task cancellation token. Signals cancellation of a task when called."""
-
-    def __init__(self, callback: Callable | Coroutine, *args: Any):
-        self.callback = callback
-        """The callback to call when the token is called."""
-        self.args = args
-        """The arguments to pass to the callback."""
-
-    def __call__(self):
-        """Call the cancellation token."""
-        if asyncio.iscoroutinefunction(self.callback):
-            asyncio.create_task(self.callback(*self.args))
-        elif asyncio.iscoroutine(self.callback):
-            asyncio.create_task(self.callback)
-        else:
-            self.callback(*self.args)  # type: ignore
+    async def __call__(self, *args: P.args, **kwargs: P.kwargs):
+        return await self.trigger(*args, **kwargs)

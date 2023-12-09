@@ -43,12 +43,12 @@ async def start_transcription(websocket: WebSocket):
     socket = WebSocketConnection(websocket)
     await socket.connect()
     LOGGER.debug("Microphone source connected")
-    config = await socket.receive(MicrophoneConfig)
+    config = await socket.receive_obj(MicrophoneConfig)
     LOGGER.info(f"Microphone config received: {config}")
 
     # create microphone
     mic_event, mic_token = await microphone.start_microphone(
-        socket.receive(bytes)
+        socket.receive_bytes
     )
     LOGGER.debug("Websocket microphone started")
     speaker_token = await speaker.start_speaker(config, mic_event)
@@ -61,11 +61,10 @@ async def start_transcription(websocket: WebSocket):
     # ) = await transcription.start_transcription(engine, mic_config, mic_event)
 
     # keep websocket alive
-    while websocket.client_state == WebSocketState.CONNECTED:
-        await asyncio.sleep(1)
+    await socket.until_disconnected()
 
     # stop transcription
     _transcription = None
-    # transcription_token()
-    speaker_token()
-    mic_token()
+    # await transcription_token()
+    await speaker_token()
+    await mic_token()

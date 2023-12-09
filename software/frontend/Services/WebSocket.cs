@@ -129,10 +129,9 @@ public class WebSocketConnection : IDisposable
             await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure,
             "Closing", cancellationToken);
         }
-        catch (WebSocketException)
+        finally
         {
             Dispose();
-            throw;
         }
     }
 

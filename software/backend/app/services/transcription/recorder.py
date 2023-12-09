@@ -1,7 +1,7 @@
 import speech_recognition as sr
 
 from ...models.microphone import MicrophoneConfig
-from ..events import CancellationToken, Event
+from ..events import Event
 from . import LOGGER
 from .engines import RecognitionEngine
 from .sources import ByteStreamSource
@@ -14,7 +14,7 @@ DYNAMIC_ENERGY_THRESHOLD = False
 """Whether to dynamically adjust the energy threshold for recording audio."""
 
 
-def start_recorder(
+async def start_recorder(
     engine: RecognitionEngine, mic_config: MicrophoneConfig, mic_event: Event
 ):
     """Start recording audio from a microphone using a speech recognition
@@ -46,4 +46,6 @@ def start_recorder(
         recording_event.trigger,
         phrase_time_limit=RECORD_TIMEOUT,
     )
-    return recording_event, CancellationToken(stopper)
+    cancellation_event = Event()
+    await cancellation_event.subscribe(stopper)
+    return recording_event, cancellation_event

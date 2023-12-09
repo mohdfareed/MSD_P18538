@@ -74,8 +74,10 @@ public class TranscriptionService
         cancellationToken.Register(async () =>
         {
             await _jsRuntime.InvokeVoidAsync("stopRecording");
+            await _socket.CloseAsync();
             _micCancellationTask = null;
             _socket = null;
+            _logger.LogDebug("Audio streaming cancelled");
         });
 
         try
@@ -100,10 +102,11 @@ public class TranscriptionService
     {
         try
         {
+            if (_socket == null) return;
             var micConfig = JsonSerializer.Deserialize<Models.MicConfig>(config)!;
-            await _socket!.SendAsync(micConfig);
+            await _socket.SendAsync(micConfig);
         }
-        catch (WebSocketException ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Unknown error occurred configuring mic");
             _micCancellationTask?.Invoke();
@@ -115,9 +118,10 @@ public class TranscriptionService
     {
         try
         {
-            await _socket!.SendAsync(audioData);
+            if (_socket == null) return;
+            await _socket.SendAsync(audioData);
         }
-        catch (WebSocketException ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Unknown error occurred capturing audio");
             _micCancellationTask?.Invoke();

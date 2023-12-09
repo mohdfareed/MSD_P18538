@@ -8,9 +8,8 @@ https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
 """
 
 import asyncio
-import json
 import logging
-from typing import Any, Type, TypeVar
+from typing import Any, Coroutine, Type, TypeVar
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
@@ -27,19 +26,20 @@ class WebSocketConnection:
         self._websocket = websocket
 
     async def connect(self):
+        """Accept the WebSocket connection."""
         try:
             await self._websocket.accept()
-        except WebSocketDisconnect as e:
-            LOGGER.error(f"Error accepting WebSocket connection: {e}")
+        # reraise but add a more descriptive message
+        except Exception as e:
             await self.disconnect()
-            raise e
+            raise e.__class__(
+                f"Failed to accept WebSocket connection: {e}"
+            ) from e
 
     async def send(self, data: Any):
+        """Send data through the WebSocket."""
         try:
             if self._websocket.client_state != WebSocketState.CONNECTED:
-                LOGGER.error(
-                    f"WebSocket client state is {self._websocket.client_state}"
-                )
                 raise RuntimeError("WebSocket client is not connected")
 
             if isinstance(data, bytes):
@@ -48,37 +48,30 @@ class WebSocketConnection:
                 await self._websocket.send_text(data)
             else:
                 await self._websocket.send_json(data)
-        except WebSocketDisconnect:
-            LOGGER.info("WebSocket disconnected")
+        except WebSocketDisconnect:  # treat as a cancelled operation
             await self.disconnect()
-            raise
-        except RuntimeError as e:
-            LOGGER.error(f"Error sending message: {e}")
-            await self.disconnect()
-            raise e
+            raise asyncio.CancelledError("WebSocket disconnected")
 
-    async def receive(self, cls: Type[T]) -> T:
+    async def receive_bytes(self) -> bytes:
+        """Receive bytes from the WebSocket."""
+        return await self._receive(self._websocket.receive_bytes())
+
+    async def receive_text(self) -> str:
+        """Receive text from the WebSocket."""
+        return await self._receive(self._websocket.receive_text())
+
+    async def receive_obj(self, cls: Type[T]) -> T:
+        """Receive an object from the WebSocket."""
+        return cls(**await self._receive(self._websocket.receive_json()))
+
+    async def _receive(self, receiver: Coroutine):
         try:
             if self._websocket.client_state != WebSocketState.CONNECTED:
-                LOGGER.error(
-                    f"WebSocket client state is {self._websocket.client_state}"
-                )
                 raise RuntimeError("WebSocket client is not connected")
-
-            if cls is bytes:
-                return await self._websocket.receive_bytes()  # type: ignore
-            elif cls is str:
-                return await self._websocket.receive_text()  # type: ignore
-            else:
-                return cls(**await self._websocket.receive_json())
+            return await receiver
         except WebSocketDisconnect:
-            LOGGER.info("WebSocket disconnected")
             await self.disconnect()
-            raise
-        except RuntimeError as e:
-            LOGGER.error(f"Error sending message: {e}")
-            await self.disconnect()
-            raise e
+            raise asyncio.CancelledError("WebSocket disconnected")
 
     async def until_disconnected(self):
         """Wait until the WebSocket is disconnected."""
@@ -86,7 +79,14 @@ class WebSocketConnection:
             await asyncio.sleep(1)
 
     async def disconnect(self):
-        await self._websocket.close()
+        """Disconnect the WebSocket."""
+        if self._websocket.state != WebSocketState.CONNECTED:
+            return  # already disconnected
+
+        try:
+            await self._websocket.close()
+        except Exception as e:
+            LOGGER.exception(e)
 
     def __del__(self):
         if self._websocket.state == WebSocketState.CONNECTED:

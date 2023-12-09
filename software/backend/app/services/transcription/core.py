@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import speech_recognition as sr
 
 from ...models.microphone import MicrophoneConfig
-from ..events import CancellationToken, Event
+from ..events import Event
 from . import LOGGER, recorder
 from .engines import (
     RecognitionEngine,
@@ -45,16 +45,18 @@ async def start_transcription(
     transcript_event = Event[str]()
     handler = await _create_transcription_handler(mic_config, engine)
     # start recording and transcribing
-    record_event, record_token = recorder.start_recorder(
+    record_event, record_canceller = await recorder.start_recorder(
         engine, mic_config, mic_event
     )
     await record_event.subscribe(handler)
 
     async def stop():  # stop recording and transcribing
         await record_event.unsubscribe(handler)
-        record_token()
+        await record_canceller()
 
-    return transcript_event, CancellationToken(stop)
+    cancellation_event = Event()
+    await cancellation_event.subscribe(stop)
+    return transcript_event, cancellation_event
 
 
 async def _create_transcription_handler(

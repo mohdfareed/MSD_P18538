@@ -9,10 +9,7 @@ import asyncio
 import logging
 from typing import Callable, Coroutine
 
-import speech_recognition as sr
-
-from ...models.microphone import MicrophoneConfig
-from ..events import CancellationToken, Event
+from ..events import Event
 
 LOGGER = logging.getLogger(__name__)
 """Microphone service logger."""
@@ -37,26 +34,28 @@ async def start_microphone(
     listen_task = asyncio.create_task(
         _listen_to_stream(source, audio_capture_event)
     )
-    canceller = CancellationToken(listen_task.cancel)
-    return audio_capture_event, canceller
+    cancellation_event = Event()
+    await cancellation_event.subscribe(listen_task.cancel)
+    return audio_capture_event, cancellation_event
 
 
 async def _listen_to_stream(
     listener: Callable[[], Coroutine[None, None, bytes]] | Coroutine,
     event: Event[bytes],
 ):
-    while True:
-        try:  # read streamed audio data
+    try:
+        while True:  # read streamed audio data
             if asyncio.iscoroutinefunction(listener):
                 data = await listener()
             elif asyncio.iscoroutine(listener):
                 data = await listener
             else:
                 raise TypeError(f"Invalid listener type: {type(listener)}")
-        except asyncio.CancelledError:
-            LOGGER.info("Microphone shutdown")
-            break
 
-        # trigger audio data
-        await event.trigger(data)
-        await asyncio.sleep(0)  # important for multithreading
+            # trigger audio data
+            await event.trigger(data)
+            await asyncio.sleep(0)  # important for multithreading
+    except asyncio.CancelledError:
+        LOGGER.info("Microphone shutdown")
+    except Exception as e:
+        LOGGER.exception(e)
