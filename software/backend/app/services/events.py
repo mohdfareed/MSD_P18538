@@ -19,14 +19,13 @@ import functools
 import logging
 from typing import Any, Callable, Coroutine, Generic, get_args
 
-from typing_extensions import ParamSpec, TypeVar
+from typing_extensions import ParamSpec
 
 LOGGER = logging.getLogger(__name__)
 """Events system logger."""
 
 P = ParamSpec("P")  # event data type definition
 EVENT_TIMEOUT = 2.5  # seconds
-LONG_EVENT_TIMEOUT = 15  # seconds
 
 
 class EventHandler(Generic[P]):
@@ -37,7 +36,7 @@ class EventHandler(Generic[P]):
         callback: Callable[P, Any] | Coroutine,
         one_shot: bool = False,
         blocking: bool = False,
-        long_running: bool = False,
+        timeout: float = EVENT_TIMEOUT,
     ):
         assert (
             asyncio.iscoroutinefunction(callback)
@@ -55,21 +54,25 @@ class EventHandler(Generic[P]):
         self.blocking = blocking
         """Whether the callback blocks the event trigger."""
         self._triggered = False  # whether the callback has been triggered
-        self._long_running = long_running  # whether timeout is long
+        self._timeout = timeout  # the timeout of the callback (seconds)
+        self._running_tasks: set[asyncio.Task] = set()
 
     async def trigger(self, *args: P.args, **kwargs: P.kwargs):
         """Trigger the callback."""
         assert not self._triggered or not self.one_shot, "Callback is one-shot"
 
-        @timeout(LONG_EVENT_TIMEOUT if self._long_running else EVENT_TIMEOUT)
-        async def handler(*args: P.args, **kwargs: P.kwargs):
-            return await self._handler(*args, **kwargs)
+        @self._timeout_wrapper(self._timeout)
+        async def handler_wrapper(*args: P.args, **kwargs: P.kwargs):
+            coroutine = self._handler(*args, **kwargs)
+            LOGGER.exception(f"Executing {coroutine} in background")
+            return await coroutine
 
         if self.blocking:
-            await handler(*args, **kwargs)
+            await handler_wrapper(*args, **kwargs)
         else:
-            asyncio.create_task(handler(*args, **kwargs))
-
+            task = asyncio.create_task(handler_wrapper(*args, **kwargs))
+            self._running_tasks.add(task)
+            task.add_done_callback(self._running_tasks.discard)
         self._triggered = True
 
     async def _handler(self, *args: P.args, **kwargs: P.kwargs):
@@ -77,11 +80,31 @@ class EventHandler(Generic[P]):
             return self.callback(*args, **kwargs)
         elif asyncio.iscoroutine(self.callback):
             return self.callback
+        elif callable(self.callback):
+            return asyncio.to_thread(self.callback, *args, **kwargs)
         else:
-            return asyncio.to_thread(self.callback, *args, **kwargs)  # type: ignore
+            raise TypeError(f"Invalid callback type: {type(self.callback)}")
+
+    def _timeout_wrapper(self, duration: float):
+        # add timeout to callback
+        def decorator(func: Callable[..., Coroutine]):
+            @functools.wraps(func)
+            async def wrapper(*args, **kwargs):
+                try:
+                    return await asyncio.wait_for(
+                        func(*args, **kwargs), duration
+                    )
+                except asyncio.TimeoutError:
+                    LOGGER.exception(
+                        f"{func} timed out after {duration} seconds"
+                    )
+
+            return wrapper
+
+        return decorator
 
     async def __call__(self, *args: P.args, **kwargs: P.kwargs):
-        await self.trigger(*args, **kwargs)
+        return await self.trigger(*args, **kwargs)
 
     def __eq__(self, other: "EventHandler[P]") -> bool:
         return self.callback == other.callback
@@ -92,6 +115,10 @@ class EventHandler(Generic[P]):
     def __repr__(self) -> str:
         type = self.callback.__class__.__qualname__
         return f"{self.callback.__qualname__}({type})"
+
+    def __del__(self):
+        for task in self._running_tasks:
+            task.cancel()
 
 
 class Event(Generic[P]):
@@ -119,15 +146,14 @@ class Event(Generic[P]):
     async def trigger(self, *args: P.args, **kwargs: P.kwargs):
         """Trigger the event."""
         self._event.set()
-        async with self._handlers_lock:
-            for handler in self.handlers:
-                LOGGER.debug(f"{self}: Triggering {handler}")
-                try:
-                    await handler(*args, **kwargs)
-                except Exception as e:
-                    LOGGER.exception(f"Error executing {handler}: {e}")
-                if handler.one_shot:  # done in background to avoid deadlocks
-                    asyncio.create_task(self.unsubscribe(handler))
+        for handler in set(self.handlers):
+            LOGGER.debug(f"{self}: Triggering {handler}")
+            try:
+                await handler(*args, **kwargs)
+            except Exception as e:
+                LOGGER.exception(f"Error executing {handler}: {e}")
+            if handler.one_shot:  # done in background to avoid deadlocks
+                await self.unsubscribe(handler)
         self._event.clear()
 
     async def is_subscribed(
@@ -147,18 +173,6 @@ class Event(Generic[P]):
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}{get_args(self)}"
 
-
-def timeout(duration: float):
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            try:
-                return await asyncio.wait_for(func(*args, **kwargs), duration)
-            except asyncio.TimeoutError:
-                LOGGER.exception(
-                    f"Execution of {func} timed out after {timeout} seconds"
-                )
-
-        return wrapper
-
-    return decorator
+    def __del__(self):
+        for handler in set(self.handlers):
+            del handler

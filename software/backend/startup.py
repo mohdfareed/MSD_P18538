@@ -26,15 +26,20 @@ def main(debug=False):
             log_config=None,
         )
     except Exception as e:
-        logging.exception(e)
+        LOGGER.exception(e)
         exit(1)
+    finally:
+        LOGGER.debug("Backend server stopped.")
+        logging.shutdown()
 
 
 def setup_environment(debug):
     load_dotenv()
     os.environ["DEBUG"] = str(debug)
+    os.environ["NOLOG"] = str(1)  # don't log on import
     import app
 
+    os.unsetenv("NOLOG")
     LOGGER.info(f"Logging to files at: {os.path.dirname(app.logging_file)}/")
     LOGGER.debug("Debug mode enabled")
 

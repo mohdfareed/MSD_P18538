@@ -14,9 +14,14 @@ from rich.logging import RichHandler
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 LOGGER = logging.getLogger(__name__)
+
 app_dir = os.path.dirname(os.path.realpath(__file__))
 logging_file = os.path.join(os.path.dirname(app_dir), "logs", "backend.log")
 debug = os.getenv("DEBUG", "False").lower() == "true"
+
+reduced_logging_modules = [
+    "uvicorn.error",
+]  # modules with reduced logging level
 
 # logging formats
 console_formatter = logging.Formatter(
@@ -52,3 +57,10 @@ root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG if debug else logging.INFO)
 root_logger.handlers = [console_handler, file_handler]
 logging.captureWarnings(True)
+
+# reduce logging level for some modules
+for module in reduced_logging_modules:
+    logging.getLogger(module).setLevel(logging.WARNING)
+
+if int(os.getenv("NOLOG", "0")) != 1:  # don't log on import
+    LOGGER.info("Backend server started.")

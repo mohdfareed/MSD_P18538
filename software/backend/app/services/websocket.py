@@ -32,9 +32,10 @@ class WebSocketConnection:
     async def connect(self):
         """Accept the WebSocket connection."""
         try:
-            handler = EventHandler(self.disconnect(), one_shot=True)
+            handler = EventHandler(self.disconnect, one_shot=True)
             await self.disconnection_event.subscribe(handler)
             await self._websocket.accept()
+            LOGGER.debug("WebSocket connection accepted")
         # reraise but add a more descriptive message
         except Exception as e:
             await self.disconnection_event()
@@ -91,6 +92,7 @@ class WebSocketConnection:
             LOGGER.exception(e)
         finally:
             await self.disconnection_event()
+            LOGGER.debug("WebSocket disconnected")
 
     def __del__(self):
         if self._websocket.state == WebSocketState.CONNECTED:
