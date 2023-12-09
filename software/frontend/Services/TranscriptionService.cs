@@ -92,7 +92,7 @@ public class TranscriptionService
         }
         catch (WebSocketException ex)
         {
-            _logger.LogError(ex, "Unknown error occurred initiating streaming");
+            _logger.LogError(ex, "Failed to start audio streaming");
             _micCancellationTask?.Invoke();
         }
     }
@@ -102,9 +102,14 @@ public class TranscriptionService
     {
         try
         {
-            if (_socket == null) return;
+            if (_socket == null) throw new WebSocketException();
             var micConfig = JsonSerializer.Deserialize<Models.MicConfig>(config)!;
             await _socket.SendAsync(micConfig);
+        }
+        catch (WebSocketException)
+        {
+            _logger.LogInformation("Mic connection closed");
+            _micCancellationTask?.Invoke();
         }
         catch (Exception ex)
         {
@@ -118,8 +123,13 @@ public class TranscriptionService
     {
         try
         {
-            if (_socket == null) return;
+            if (_socket == null) throw new WebSocketException();
             await _socket.SendAsync(audioData);
+        }
+        catch (WebSocketException)
+        {
+            _logger.LogInformation("Mic connection closed");
+            _micCancellationTask?.Invoke();
         }
         catch (Exception ex)
         {

@@ -17,7 +17,7 @@ public class WebSocketConnection : IDisposable
         }
         catch (WebSocketException)
         {
-            Dispose();
+            await CloseAsync(cancellationToken);
             throw;
         }
     }
@@ -49,14 +49,14 @@ public class WebSocketConnection : IDisposable
         {
             if (_socket.State != WebSocketState.Open)
             {
-                throw new InvalidOperationException("Connection is not open");
+                throw new WebSocketException("Connection is not open");
             }
             await _socket.SendAsync(new ArraySegment<byte>(buffer),
             messageType, true, cancellationToken);
         }
         catch (WebSocketException)
         {
-            Dispose();
+            await CloseAsync(cancellationToken);
             throw;
         }
     }
@@ -72,7 +72,7 @@ public class WebSocketConnection : IDisposable
             WebSocketReceiveResult result;
             if (_socket.State != WebSocketState.Open)
             {
-                throw new InvalidOperationException("Connection is not open");
+                throw new WebSocketException("Connection is not open");
             }
 
             do
@@ -117,7 +117,7 @@ public class WebSocketConnection : IDisposable
         }
         catch (WebSocketException)
         {
-            Dispose();
+            await CloseAsync(cancellationToken);
             throw;
         }
     }
@@ -129,6 +129,7 @@ public class WebSocketConnection : IDisposable
             await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure,
             "Closing", cancellationToken);
         }
+        catch { } // Ignore closing errors
         finally
         {
             Dispose();
