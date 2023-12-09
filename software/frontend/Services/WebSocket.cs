@@ -8,7 +8,8 @@ public class WebSocketConnection : IDisposable
 {
     private readonly ClientWebSocket _socket = new();
 
-    public async Task ConnectAsync(string url, CancellationToken cancellationToken = default)
+    public async Task ConnectAsync(string url,
+    CancellationToken cancellationToken = default)
     {
         try
         {
@@ -21,7 +22,8 @@ public class WebSocketConnection : IDisposable
         }
     }
 
-    public async Task SendAsync<T>(T data, CancellationToken cancellationToken = default)
+    public async Task SendAsync<T>(T data,
+    CancellationToken cancellationToken = default)
     {
         byte[] buffer;
         WebSocketMessageType messageType;
@@ -37,7 +39,8 @@ public class WebSocketConnection : IDisposable
                 messageType = WebSocketMessageType.Binary;
                 break;
             default:
-                buffer = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(data));
+                var json_data = JsonSerializer.Serialize(data);
+                buffer = Encoding.UTF8.GetBytes(json_data);
                 messageType = WebSocketMessageType.Text;
                 break;
         }
@@ -48,8 +51,8 @@ public class WebSocketConnection : IDisposable
             {
                 throw new InvalidOperationException("Connection is not open");
             }
-            await _socket.SendAsync(new ArraySegment<byte>(buffer), messageType,
-            true, cancellationToken);
+            await _socket.SendAsync(new ArraySegment<byte>(buffer),
+            messageType, true, cancellationToken);
         }
         catch (WebSocketException)
         {
@@ -59,7 +62,8 @@ public class WebSocketConnection : IDisposable
     }
 
 
-    public async Task<T?> ReceiveAsync<T>(CancellationToken cancellationToken = default)
+    public async Task<T?> ReceiveAsync<T>(
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -73,7 +77,8 @@ public class WebSocketConnection : IDisposable
 
             do
             {
-                result = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+                var arr = new ArraySegment<byte>(buffer);
+                result = await _socket.ReceiveAsync(arr, cancellationToken);
                 ms.Write(buffer, 0, result.Count);
             } while (!result.EndOfMessage);
             ms.Seek(0, SeekOrigin.Begin);
@@ -85,7 +90,8 @@ public class WebSocketConnection : IDisposable
             {
                 if (result.MessageType != WebSocketMessageType.Binary)
                 {
-                    throw new InvalidOperationException("Expected binary message");
+                    throw new InvalidOperationException(
+                        "Expected binary message");
                 }
                 return (T)(object)ms.ToArray();
             }
@@ -93,7 +99,8 @@ public class WebSocketConnection : IDisposable
             {
                 if (result.MessageType != WebSocketMessageType.Text)
                 {
-                    throw new InvalidOperationException("Expected text message");
+                    throw new InvalidOperationException(
+                        "Expected text message");
                 }
                 return (T)(object)Encoding.UTF8.GetString(ms.ToArray());
             }
@@ -101,7 +108,8 @@ public class WebSocketConnection : IDisposable
             {
                 if (result.MessageType != WebSocketMessageType.Text)
                 {
-                    throw new InvalidOperationException("Expected text message for JSON deserialization");
+                    throw new InvalidOperationException(
+                        "Expected text message for JSON deserialization");
                 }
                 string text = Encoding.UTF8.GetString(ms.ToArray());
                 return JsonSerializer.Deserialize<T>(text);
@@ -118,7 +126,8 @@ public class WebSocketConnection : IDisposable
     {
         try
         {
-            await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", cancellationToken);
+            await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure,
+            "Closing", cancellationToken);
         }
         catch (WebSocketException)
         {

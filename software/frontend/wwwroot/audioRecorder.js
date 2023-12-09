@@ -1,8 +1,8 @@
 const CHUNK_SIZE = 1000; // milliseconds
 let mediaRecorder = null;
 let mediaStream = null;
-var config = { // must match C# MicConfig class
-    SampleRate: 0,
+var config = { // REVIEW: must match MicConfig model class
+    sample_rate: 0,
 };
 
 async function startRecording(dotNetReference, callback, configCallback) {
@@ -10,7 +10,7 @@ async function startRecording(dotNetReference, callback, configCallback) {
     // enable microphone and ask for permission
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     mediaRecorder = new MediaRecorder(mediaStream);
-    config.SampleRate = mediaStream.getAudioTracks()[0].getSettings().sampleRate;
+    config.sample_rate = mediaStream.getAudioTracks()[0].getSettings().sampleRate;
 
     // send audio config to C# code
     let json_config = JSON.stringify(config);

@@ -48,10 +48,12 @@ public class TranscriptionService
             await socket.ConnectAsync(_websocket_route + "stream",
             cancellationToken);
 
-            while ((message = await socket.ReceiveAsync<string>(cancellationToken)) != null)
+            message = await socket.ReceiveAsync<string>(cancellationToken);
+            while (message != null)
             {
                 handler(message);
-            }
+                message = await socket.ReceiveAsync<string>(cancellationToken);
+            };
         }
         catch (OperationCanceledException)
         {
@@ -59,11 +61,13 @@ public class TranscriptionService
         }
         catch (WebSocketException ex)
         {
-            _logger.LogError(ex, "Websocket error occurred receiving transcription");
+            _logger.LogError(ex,
+            "Websocket error occurred receiving transcription");
         }
     }
 
-    public async Task StartAudioStreamingAsync(Action cancellationAction, CancellationToken cancellationToken = default)
+    public async Task StartAudioStreamingAsync(Action cancellationAction,
+    CancellationToken cancellationToken = default)
     {
         _socket = new WebSocketConnection();
         _micCancellationTask = cancellationAction;
@@ -86,7 +90,7 @@ public class TranscriptionService
         }
         catch (WebSocketException ex)
         {
-            _logger.LogError(ex, "Unknown error occurred streaming audio");
+            _logger.LogError(ex, "Unknown error occurred initiating streaming");
             _micCancellationTask?.Invoke();
         }
     }
@@ -99,13 +103,12 @@ public class TranscriptionService
             var micConfig = JsonSerializer.Deserialize<Models.MicConfig>(config)!;
             await _socket!.SendAsync(micConfig);
         }
-        catch (Exception ex)
+        catch (WebSocketException ex)
         {
             _logger.LogError(ex, "Unknown error occurred configuring mic");
             _micCancellationTask?.Invoke();
         }
     }
-
 
     [JSInvokable]
     public async Task AudioCaptureCallback(byte[] audioData)
@@ -114,7 +117,7 @@ public class TranscriptionService
         {
             await _socket!.SendAsync(audioData);
         }
-        catch (Exception ex)
+        catch (WebSocketException ex)
         {
             _logger.LogError(ex, "Unknown error occurred capturing audio");
             _micCancellationTask?.Invoke();

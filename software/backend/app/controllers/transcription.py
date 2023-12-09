@@ -40,18 +40,17 @@ async def stream_transcription(websocket: WebSocket):
 async def start_transcription(websocket: WebSocket):
     global _transcription
     assert _transcription is None, "Transcription service is already running"
-    await websocket.accept()
-    LOGGER.debug("Transcription websocket connection accepted")
-    config_text = await websocket.receive_json()
-    LOGGER.debug(f"Config received: {config_text}")
-    config = MicrophoneConfig(**await websocket.receive_json())
-    LOGGER.debug(f"Microphone config received: {config}")
+    socket = WebSocketConnection(websocket)
+    await socket.connect()
+    LOGGER.debug("Microphone source connected")
+    config = await socket.receive(MicrophoneConfig)
+    LOGGER.info(f"Microphone config received: {config}")
 
     # create microphone
     mic_event, mic_token = await microphone.start_microphone(
-        websocket.receive_bytes
+        socket.receive(bytes)
     )
-    LOGGER.error("websocket microphone started")
+    LOGGER.debug("Websocket microphone started")
     speaker_token = await speaker.start_speaker(config, mic_event)
 
     # # start transcription

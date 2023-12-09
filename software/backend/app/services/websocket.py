@@ -10,13 +10,14 @@ https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
 import asyncio
 import json
 import logging
-from typing import Any, Type
+from typing import Any, Type, TypeVar
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 
 LOGGER = logging.getLogger(__name__)
 """WebSockets logger."""
+T = TypeVar("T")
 
 
 class WebSocketConnection:
@@ -56,7 +57,7 @@ class WebSocketConnection:
             await self.disconnect()
             raise e
 
-    async def receive(self, cls: Type = str) -> str | dict | bytes:
+    async def receive(self, cls: Type[T]) -> T:
         try:
             if self._websocket.client_state != WebSocketState.CONNECTED:
                 LOGGER.error(
@@ -65,11 +66,11 @@ class WebSocketConnection:
                 raise RuntimeError("WebSocket client is not connected")
 
             if cls is bytes:
-                return await self._websocket.receive_bytes()
+                return await self._websocket.receive_bytes()  # type: ignore
             elif cls is str:
-                return await self._websocket.receive_text()
+                return await self._websocket.receive_text()  # type: ignore
             else:
-                return cls(**json.loads(await self._websocket.receive_json()))
+                return cls(**await self._websocket.receive_json())
         except WebSocketDisconnect:
             LOGGER.info("WebSocket disconnected")
             await self.disconnect()

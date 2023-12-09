@@ -36,6 +36,7 @@ console_handler = RichHandler(
     show_path=False,
     tracebacks_show_locals=debug,
     rich_tracebacks=True,
+    tracebacks_width=80,
 )
 console_handler.setFormatter(console_formatter)
 

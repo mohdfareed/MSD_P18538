@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 async def start_microphone(
-    source: Callable[[], Coroutine[None, None, bytes]],
+    source: Callable[[], Coroutine[None, None, bytes]] | Coroutine,
 ):
     """Start a microphone.
 
@@ -42,12 +42,17 @@ async def start_microphone(
 
 
 async def _listen_to_stream(
-    listener: Callable[[], Coroutine[None, None, bytes]],
+    listener: Callable[[], Coroutine[None, None, bytes]] | Coroutine,
     event: Event[bytes],
 ):
     while True:
         try:  # read streamed audio data
-            data = await listener()
+            if asyncio.iscoroutinefunction(listener):
+                data = await listener()
+            elif asyncio.iscoroutine(listener):
+                data = await listener
+            else:
+                raise TypeError(f"Invalid listener type: {type(listener)}")
         except asyncio.CancelledError:
             LOGGER.info("Microphone shutdown")
             break

@@ -34,7 +34,7 @@ class Event(Generic[P]):
 
     async def subscribe(self, callback: Callable[P, Coroutine] | Coroutine):
         """Subscribe to the event."""
-        assert not self.is_subscribed(callback) and (
+        assert not await self.is_subscribed(callback) and (
             asyncio.iscoroutinefunction(callback)
             or asyncio.iscoroutine(callback)
         ), f"Event handler '{callback}' is of invalid type"
