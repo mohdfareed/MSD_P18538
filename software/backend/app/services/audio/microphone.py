@@ -6,13 +6,10 @@ to listeners. It uses the events service to broadcast the audio data.
 """
 
 import asyncio
-import logging
 from typing import Callable, Coroutine
 
 from ..events import Event
-
-LOGGER = logging.getLogger(__name__)
-"""Microphone service logger."""
+from . import LOGGER
 
 
 async def start_microphone(

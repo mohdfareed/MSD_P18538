@@ -1,8 +1,6 @@
-import asyncio
 import logging
 
 from fastapi import APIRouter, WebSocket
-from fastapi.websockets import WebSocketState
 
 from ..models.microphone import MicrophoneConfig
 from ..services import transcription
@@ -51,7 +49,11 @@ async def start_transcription(websocket: WebSocket):
         socket.receive_bytes
     )
     LOGGER.debug("Websocket microphone started")
-    speaker_token = await speaker.start_speaker(config, mic_event)
+
+    # speaker_token = await speaker.start_speaker(config, mic_event)
+    speaker_token = await speaker.start_file_speaker(
+        config, mic_event, "test.wav"
+    )
 
     # # start transcription
     # engine = transcription.engines.WhisperEngine()

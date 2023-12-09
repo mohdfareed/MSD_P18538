@@ -5,16 +5,13 @@ Provides an interface for playing audio to a speaker. It uses the events
 service to listen to audio data and play it.
 """
 
-import logging
 import wave
 
 import pyaudio
 
 from ...models.microphone import MicrophoneConfig
 from ..events import Event
-
-LOGGER = logging.getLogger(__name__)
-"""Speaker service logger."""
+from . import LOGGER
 
 
 async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
@@ -76,6 +73,7 @@ async def start_file_speaker(
 
     async def write_audio(data: bytes):
         """Play audio data."""
+        LOGGER.error(f"Writing audio data to {file_path}")
         with wave.open(file_path, "wb") as f:
             f.setnchannels(1)
             f.setsampwidth(mic_config.sample_width)
