@@ -2,8 +2,8 @@
 Events system. This is used to process outputs from services asynchronously.
 
 Callback functions can be registered to an event. When the event is triggered,
-all registered callbacks are called asynchronously. Callbacks either be
-coroutines or coroutine functions. Callbacks are called with the arguments
+all registered callbacks are called. Callbacks either be coroutines, coroutine
+functions, or standard functions. Callbacks are called with the arguments
 passed to the event trigger when callbacks are coroutine functions. Callbacks
 are called without arguments when callbacks are coroutines.
 
@@ -15,14 +15,83 @@ the task.
 """
 
 import asyncio
+import functools
 import logging
-from typing import Any, Callable, Coroutine, Generic
+from typing import Any, Callable, Coroutine, Generic, get_args
 
-from typing_extensions import ParamSpec
+from typing_extensions import ParamSpec, TypeVar
 
 LOGGER = logging.getLogger(__name__)
 """Events system logger."""
+
 P = ParamSpec("P")  # event data type definition
+EVENT_TIMEOUT = 2.5  # seconds
+LONG_EVENT_TIMEOUT = 15  # seconds
+
+
+class EventHandler(Generic[P]):
+    """A callback handler of an event. Used to subscribe to events."""
+
+    def __init__(
+        self,
+        callback: Callable[P, Any] | Coroutine,
+        one_shot: bool = False,
+        blocking: bool = False,
+        long_running: bool = False,
+    ):
+        assert (
+            asyncio.iscoroutinefunction(callback)
+            or asyncio.iscoroutine(callback)
+            or callable(callback)
+        ), "Invalid callback type"
+        assert not (
+            asyncio.iscoroutine(callback) and not one_shot
+        ), "Coroutines must be one-shot"
+
+        self.callback = callback
+        """The callback function."""
+        self.one_shot = one_shot
+        """Whether the callback is only triggered once."""
+        self.blocking = blocking
+        """Whether the callback blocks the event trigger."""
+        self._triggered = False  # whether the callback has been triggered
+        self._long_running = long_running  # whether timeout is long
+
+    async def trigger(self, *args: P.args, **kwargs: P.kwargs):
+        """Trigger the callback."""
+        assert not self._triggered or not self.one_shot, "Callback is one-shot"
+
+        @timeout(LONG_EVENT_TIMEOUT if self._long_running else EVENT_TIMEOUT)
+        async def handler(*args: P.args, **kwargs: P.kwargs):
+            return await self._handler(*args, **kwargs)
+
+        if self.blocking:
+            await handler(*args, **kwargs)
+        else:
+            asyncio.create_task(handler(*args, **kwargs))
+
+        self._triggered = True
+
+    async def _handler(self, *args: P.args, **kwargs: P.kwargs):
+        if asyncio.iscoroutinefunction(self.callback):
+            return self.callback(*args, **kwargs)
+        elif asyncio.iscoroutine(self.callback):
+            return self.callback
+        else:
+            return asyncio.to_thread(self.callback, *args, **kwargs)  # type: ignore
+
+    async def __call__(self, *args: P.args, **kwargs: P.kwargs):
+        await self.trigger(*args, **kwargs)
+
+    def __eq__(self, other: "EventHandler[P]") -> bool:
+        return self.callback == other.callback
+
+    def __hash__(self) -> int:
+        return hash(self.callback)
+
+    def __repr__(self) -> str:
+        type = self.callback.__class__.__qualname__
+        return f"{self.callback.__qualname__}({type})"
 
 
 class Event(Generic[P]):
@@ -30,38 +99,36 @@ class Event(Generic[P]):
     system. When triggered, all subscribers are notified."""
 
     def __init__(self):
-        self.handlers: set[Callable[P, Any] | Coroutine] = set()
-        """The handlers of the event."""
-        self.trigger_event = asyncio.Event()
-        """Event set for the duration of the event trigger."""
+        self.handlers: set[EventHandler[P]] = set()
+        """The callback handlers of the event."""
         self._handlers_lock = asyncio.Lock()
+        self._event = asyncio.Event()
 
-    async def subscribe(self, callback: Callable[P, Any] | Coroutine):
+    async def subscribe(self, handler: EventHandler[P]):
         """Subscribe to the event."""
-        assert not await self.is_subscribed(
-            callback
-        ), f"Event handler '{callback}' is of invalid type"
-
         async with self._handlers_lock:
-            self.handlers.add(callback)
+            LOGGER.debug(f"{self}: Subscribing {handler}")
+            self.handlers.add(handler)
 
-    async def unsubscribe(self, callback: Callable[P, Any] | Coroutine):
+    async def unsubscribe(self, handler: EventHandler[P]):
         """Unsubscribe from the event."""
-        assert await self.is_subscribed(
-            callback
-        ), f"Event handler '{callback}' is not subscribed to event '{self}'"
-
         async with self._handlers_lock:
-            self.handlers.remove(callback)
+            LOGGER.debug(f"{self}: Unsubscribing {handler}")
+            self.handlers.remove(handler)
 
     async def trigger(self, *args: P.args, **kwargs: P.kwargs):
         """Trigger the event."""
-        self.trigger_event.set()
+        self._event.set()
         async with self._handlers_lock:
             for handler in self.handlers:
-                LOGGER.debug(f"Executing handler '{handler}'")
-                await self._execute_handler(handler, *args, **kwargs)
-        self.trigger_event.clear()
+                LOGGER.debug(f"{self}: Triggering {handler}")
+                try:
+                    await handler(*args, **kwargs)
+                except Exception as e:
+                    LOGGER.exception(f"Error executing {handler}: {e}")
+                if handler.one_shot:  # done in background to avoid deadlocks
+                    asyncio.create_task(self.unsubscribe(handler))
+        self._event.clear()
 
     async def is_subscribed(
         self, callback: Callable[P, Any] | Coroutine
@@ -72,18 +139,26 @@ class Event(Generic[P]):
 
     async def until_triggered(self):
         """Wait until the event is triggered."""
-        await self.trigger_event.wait()
-
-    async def _execute_handler(self, handler, *args, **kwargs):
-        # execute event handler asynchronously
-        if asyncio.iscoroutinefunction(handler):
-            asyncio.create_task(handler(*args, **kwargs))
-        elif asyncio.iscoroutine(handler):
-            asyncio.create_task(handler)
-            # unsubscribe in the background to avoid deadlocks
-            asyncio.create_task(self.unsubscribe(handler))
-        else:  # execute non-async handler in thread
-            asyncio.create_task(asyncio.to_thread(handler, *args, **kwargs))
+        await self._event.wait()
 
     async def __call__(self, *args: P.args, **kwargs: P.kwargs):
         return await self.trigger(*args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}{get_args(self)}"
+
+
+def timeout(duration: float):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            try:
+                return await asyncio.wait_for(func(*args, **kwargs), duration)
+            except asyncio.TimeoutError:
+                LOGGER.exception(
+                    f"Execution of {func} timed out after {timeout} seconds"
+                )
+
+        return wrapper
+
+    return decorator

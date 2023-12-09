@@ -10,7 +10,7 @@ import wave
 import pyaudio
 
 from ...models.microphone import MicrophoneConfig
-from ..events import Event
+from ..events import Event, EventHandler
 from . import LOGGER
 
 
@@ -49,9 +49,15 @@ async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
         stream.write(data)
 
     # start listening to microphone
-    await mic_event.subscribe(play_audio)
+    handler = EventHandler(play_audio)
+    await mic_event.subscribe(handler)
+
+    # create cancellation token
     cancellation_event = Event()
-    await cancellation_event.subscribe(mic_event.unsubscribe(play_audio))
+    cancellation_handler = EventHandler(
+        mic_event.unsubscribe(handler), one_shot=True
+    )
+    await cancellation_event.subscribe(cancellation_handler)
     return cancellation_event
 
 
@@ -81,7 +87,13 @@ async def start_file_speaker(
             f.writeframes(data)
 
     # start listening to microphone
-    await mic_event.subscribe(write_audio)
+    handler = EventHandler(write_audio)
+    await mic_event.subscribe(handler)
+
+    # create cancellation token
     cancellation_event = Event()
-    await cancellation_event.subscribe(mic_event.unsubscribe(write_audio))
+    cancellation_handler = EventHandler(
+        mic_event.unsubscribe(handler), one_shot=True
+    )
+    await cancellation_event.subscribe(cancellation_handler)
     return cancellation_event

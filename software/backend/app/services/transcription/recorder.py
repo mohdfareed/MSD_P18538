@@ -1,7 +1,7 @@
 import speech_recognition as sr
 
 from ...models.microphone import MicrophoneConfig
-from ..events import Event
+from ..events import Event, EventHandler
 from . import LOGGER
 from .engines import RecognitionEngine
 from .sources import ByteStreamSource
@@ -47,5 +47,6 @@ async def start_recorder(
         phrase_time_limit=RECORD_TIMEOUT,
     )
     cancellation_event = Event()
-    await cancellation_event.subscribe(stopper)
+    handler = EventHandler(stopper, one_shot=True)
+    await cancellation_event.subscribe(handler)
     return recording_event, cancellation_event

@@ -5,7 +5,7 @@ from fastapi import APIRouter, WebSocket
 from ..models.microphone import MicrophoneConfig
 from ..services import transcription
 from ..services.audio import microphone, speaker
-from ..services.events import Event
+from ..services.events import Event, EventHandler
 from ..services.websocket import WebSocketConnection
 
 LOGGER = logging.getLogger(__name__)
@@ -22,16 +22,11 @@ async def stream_transcription(websocket: WebSocket):
     #         reason="Transcription service is not running",
     #         code=status.WS_1002_PROTOCOL_ERROR,
     #     )
+
     socket = WebSocketConnection(websocket)
     await socket.connect()
-
     # await _transcription.subscribe(callback=socket.send)
     LOGGER.warning("Transcription client connected")
-
-    # keep websocket alive
-    await socket.until_disconnected()
-    LOGGER.warning("Transcription client disconnected")
-    # await _transcription.unsubscribe(callback=broadcast)
 
 
 @router.websocket("/transcription/start")
@@ -51,22 +46,25 @@ async def start_transcription(websocket: WebSocket):
     LOGGER.debug("Websocket microphone started")
 
     # speaker_token = await speaker.start_speaker(config, mic_event)
-    speaker_token = await speaker.start_file_speaker(
-        config, mic_event, "test.wav"
-    )
+    # speaker_token = await speaker.start_file_speaker(
+    #     config, mic_event, "test.wav"
+    # )
+    # LOGGER.debug("Speaker started")
 
-    # # start transcription
+    # start transcription
     # engine = transcription.engines.WhisperEngine()
     # (
     #     _transcription,
     #     transcription_token,
     # ) = await transcription.start_transcription(engine, mic_config, mic_event)
 
-    # keep websocket alive
-    await socket.until_disconnected()
+    async def shutdown():
+        global _transcription
+        # await transcription_token()
+        # await speaker_token()
+        await mic_token()
+        _transcription = None
+        LOGGER.debug("Transcription stopped")
 
-    # stop transcription
-    _transcription = None
-    # await transcription_token()
-    await speaker_token()
-    await mic_token()
+    shutdown_callback = EventHandler(shutdown, one_shot=True)
+    await socket.disconnection_event.subscribe(shutdown_callback)

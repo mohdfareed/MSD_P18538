@@ -12,7 +12,7 @@ import io
 import speech_recognition as sr
 
 from ...models.microphone import MicrophoneConfig
-from ..events import Event
+from ..events import Event, EventHandler
 
 physical_mic = sr.Microphone()
 """The device's physical microphone source."""
@@ -25,21 +25,23 @@ class ByteStreamSource(sr.AudioSource):
         self.SAMPLE_RATE = mic_config.sample_rate
         self.SAMPLE_WIDTH = mic_config.sample_width
         self.CHUNK = mic_config.chunk_size
-        self.mic_event = mic_event
         self.stream = None
+        self._mic_event = mic_event
+        self._handler = None
 
     def __enter__(self):
         self.stream = self.ByteStream()
-        asyncio.create_task(self.mic_event.subscribe(self.stream.write_async))
+        self._handler = EventHandler(self.stream.write_async)
+        asyncio.create_task(self._mic_event.subscribe(self._handler))
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.stream is None:
+        if self.stream is None or self._handler is None:
             return
-        asyncio.create_task(
-            self.mic_event.unsubscribe(self.stream.write_async)
-        )
+
+        asyncio.create_task(self._mic_event.unsubscribe(self._handler))
         self.stream = None
+        self._handler = None
 
     class ByteStream(io.RawIOBase):
         def __init__(self):

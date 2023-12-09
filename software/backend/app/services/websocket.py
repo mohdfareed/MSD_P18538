@@ -14,6 +14,8 @@ from typing import Any, Coroutine, Type, TypeVar
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 
+from .events import Event, EventHandler
+
 LOGGER = logging.getLogger(__name__)
 """WebSockets logger."""
 T = TypeVar("T")
@@ -23,15 +25,19 @@ class WebSocketConnection:
     """WebSocket connection."""
 
     def __init__(self, websocket: WebSocket):
+        self.disconnection_event = self.DisconnectionEvent()
+        """Event triggered when the WebSocket is disconnected."""
         self._websocket = websocket
 
     async def connect(self):
         """Accept the WebSocket connection."""
         try:
+            handler = EventHandler(self.disconnect(), one_shot=True)
+            await self.disconnection_event.subscribe(handler)
             await self._websocket.accept()
         # reraise but add a more descriptive message
         except Exception as e:
-            await self.disconnect()
+            await self.disconnection_event()
             raise e.__class__(
                 f"Failed to accept WebSocket connection: {e}"
             ) from e
@@ -49,7 +55,7 @@ class WebSocketConnection:
             else:
                 await self._websocket.send_json(data)
         except WebSocketDisconnect:  # treat as a cancelled operation
-            await self.disconnect()
+            await self.disconnection_event()
             raise asyncio.CancelledError("WebSocket disconnected")
 
     async def receive_bytes(self) -> bytes:
@@ -69,14 +75,10 @@ class WebSocketConnection:
             if self._websocket.client_state != WebSocketState.CONNECTED:
                 raise RuntimeError("WebSocket client is not connected")
             return await receiver
-        except WebSocketDisconnect:
-            await self.disconnect()
+        except WebSocketDisconnect as e:
+            LOGGER.exception(e)
+            await self.disconnection_event()
             raise asyncio.CancelledError("WebSocket disconnected")
-
-    async def until_disconnected(self):
-        """Wait until the WebSocket is disconnected."""
-        while self._websocket.state == WebSocketState.CONNECTED:
-            await asyncio.sleep(1)
 
     async def disconnect(self):
         """Disconnect the WebSocket."""
@@ -87,7 +89,14 @@ class WebSocketConnection:
             await self._websocket.close()
         except Exception as e:
             LOGGER.exception(e)
+        finally:
+            await self.disconnection_event()
 
     def __del__(self):
         if self._websocket.state == WebSocketState.CONNECTED:
-            asyncio.create_task(self.disconnect())
+            asyncio.create_task(self.disconnection_event())
+
+    class DisconnectionEvent(Event):
+        """Event triggered when the WebSocket is disconnected."""
+
+        pass
