@@ -1,3 +1,5 @@
+import io
+
 import speech_recognition as sr
 
 from ...models.microphone import MicrophoneConfig
@@ -34,10 +36,15 @@ async def start_recorder(
     engine.recognizer.energy_threshold = ENERGY_THRESHOLD
     engine.recognizer.dynamic_energy_threshold = DYNAMIC_ENERGY_THRESHOLD
 
-    source = ByteStreamSource(mic_event, mic_config)
+    # source = ByteStreamSource(mic_event, mic_config)
+    buffer = io.BytesIO()
+    source = sr.AudioFile(buffer)
+    await mic_event.subscribe(EventHandler(buffer.write, blocking=True))
+    await mic_event.until_triggered()  # wait for first audio data
     with source:  # adjust for ambient noise
-        LOGGER.error("Adjusting recognizer for ambient noise")
+        LOGGER.info("Adjusting recognizer for ambient noise")
         engine.recognizer.adjust_for_ambient_noise(source)
+        LOGGER.info("Recognizer adjusted")
 
     # starting recording in the background
     recording_event = Event[sr.AudioData]()

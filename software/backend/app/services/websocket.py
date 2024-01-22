@@ -76,8 +76,7 @@ class WebSocketConnection:
             if self._websocket.client_state != WebSocketState.CONNECTED:
                 raise RuntimeError("WebSocket client is not connected")
             return await receiver
-        except WebSocketDisconnect as e:
-            LOGGER.exception(e)
+        except WebSocketDisconnect:
             await self.disconnection_event()
             raise asyncio.CancelledError("WebSocket disconnected")
 

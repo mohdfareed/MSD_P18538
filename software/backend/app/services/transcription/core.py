@@ -107,3 +107,24 @@ async def _create_handler(
             return
 
     return EventHandler(handler)
+
+
+def create_console_display():
+    """Create a display that prints transcriptions to the console."""
+
+    max_lines = 5
+    lines = []
+
+    async def display(transcript: str):
+        nonlocal lines
+        if transcript == PHRASE_TERMINATOR:
+            lines.append("")
+            if len(lines) > max_lines:
+                lines = lines[-max_lines:]
+        else:
+            lines[-1] = transcript
+
+        print("Transcription:")
+        print("\n".join(lines), end="\r", flush=True)
+
+    return EventHandler(display)

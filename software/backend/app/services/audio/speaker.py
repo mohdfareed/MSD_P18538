@@ -28,35 +28,28 @@ async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
             cancellation token to stop listening.
     """
 
-    def sample_width_to_format(width: int):
-        return {
-            1: pyaudio.paInt8,
-            2: pyaudio.paInt16,
-            3: pyaudio.paInt24,
-            4: pyaudio.paInt32,
-        }[width]
-
     p = pyaudio.PyAudio()
     stream = p.open(
-        format=sample_width_to_format(mic_config.sample_width),
-        channels=1,  # mono
+        format=p.get_format_from_width(mic_config.sample_width),
+        channels=mic_config.num_channels,
         rate=mic_config.sample_rate,
         output=True,
     )
 
-    async def play_audio(data: bytes):
-        """Play audio data."""
-        stream.write(data)
-
     # start listening to microphone
-    handler = EventHandler(play_audio)
+    handler = EventHandler(stream.write, blocking=True)
     await mic_event.subscribe(handler)
+
+    async def stop_speaker():
+        await mic_event.unsubscribe(handler)
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+        LOGGER.debug("Speaker stopped")
 
     # create cancellation token
     cancellation_event = Event()
-    cancellation_handler = EventHandler(
-        mic_event.unsubscribe(handler), one_shot=True
-    )
+    cancellation_handler = EventHandler(stop_speaker, one_shot=True)
     await cancellation_event.subscribe(cancellation_handler)
     return cancellation_event
 
@@ -76,24 +69,27 @@ async def start_file_speaker(
         Tuple[Event[bytes], MicrophoneConfig, CancellationToken]: The audio
             cancellation token to stop listening.
     """
+    buffer = bytes()
 
     async def write_audio(data: bytes):
-        """Play audio data."""
-        LOGGER.error(f"Writing audio data to {file_path}")
+        nonlocal buffer
+        buffer += data
         with wave.open(file_path, "wb") as f:
-            f.setnchannels(1)
+            f.setnchannels(mic_config.num_channels)
             f.setsampwidth(mic_config.sample_width)
             f.setframerate(mic_config.sample_rate)
-            f.writeframes(data)
+            f.writeframes(buffer)
 
     # start listening to microphone
     handler = EventHandler(write_audio)
     await mic_event.subscribe(handler)
 
+    async def stop_speaker():
+        await mic_event.unsubscribe(handler)
+        LOGGER.debug("Speaker stopped")
+
     # create cancellation token
     cancellation_event = Event()
-    cancellation_handler = EventHandler(
-        mic_event.unsubscribe(handler), one_shot=True
-    )
+    cancellation_handler = EventHandler(stop_speaker, one_shot=True)
     await cancellation_event.subscribe(cancellation_handler)
     return cancellation_event

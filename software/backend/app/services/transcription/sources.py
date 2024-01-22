@@ -8,14 +8,20 @@ transcribe the audio data.
 
 import asyncio
 import io
+import re
+import threading
+import time
 
 import speech_recognition as sr
 
 from ...models.microphone import MicrophoneConfig
 from ..events import Event, EventHandler
+from . import LOGGER
 
 physical_mic = sr.Microphone()
 """The device's physical microphone source."""
+
+_event_loop = asyncio.get_running_loop()
 
 
 class ByteStreamSource(sr.AudioSource):
@@ -31,8 +37,15 @@ class ByteStreamSource(sr.AudioSource):
 
     def __enter__(self):
         self.stream = self.ByteStream()
-        self._handler = EventHandler(self.stream.write_async)
-        asyncio.create_task(self._mic_event.subscribe(self._handler))
+        self._handler = EventHandler(self.stream.write, blocking=True)
+        asyncio.run_coroutine_threadsafe(
+            self.startup(self._handler),
+            asyncio.get_running_loop(),
+        ).result()
+        # asyncio.create_task(self.startup(self._handler))
+        # while not task.done():
+        #     print("Waiting for subscription to complete")
+        #     pass
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -43,21 +56,42 @@ class ByteStreamSource(sr.AudioSource):
         self.stream = None
         self._handler = None
 
-    class ByteStream(io.RawIOBase):
-        def __init__(self):
-            self.queue = asyncio.Queue[bytes]()
-            self._event_loop = asyncio.get_event_loop()
+    async def startup(self, handler: EventHandler):
+        LOGGER.debug("Microphone source starting up")
+        await self._mic_event.subscribe(handler)
+        LOGGER.debug("Microphone source started")
+
+    class ByteStream(io.BytesIO):
+        # def __init__(self):
+        #     self.buffer
+        #     self._event_loop = asyncio.get_running_loop()
 
         def read(self, size: int = -1) -> bytes:
-            return asyncio.run_coroutine_threadsafe(
-                self.read_async(size), self._event_loop
-            ).result()
+            # def run_async_read():
+            #     asyncio.new_event_loop().run_until_complete(
+            #         self.read_async(size)
+            #     )
 
-        async def read_async(self, size: int = -1) -> bytes:
-            chunk = b""
-            while len(chunk) < size:
-                chunk += await self.queue.get()
-            return chunk
+            # thread = threading.Thread(target=run_async_read)
+            # thread.start()
+            # thread.join()  # Wait for the completion of the async startup
+            # return thread.result()
+            # print("Reading from stream")
+            # return asyncio.run_coroutine_threadsafe(
+            #     self.read_async(size), asyncio.get_running_loop()
+            # ).result()
 
-        async def write_async(self, data: bytes) -> None:
-            await self.queue.put(data)
+            # wait until buffer has enough data
+            while not (data := super().read(size)):
+                time.sleep(0.1)
+            return data
+
+        # async def read_async(self, size: int = -1) -> bytes:
+        #     chunk = b""
+        #     while len(chunk) < size:
+        #         chunk += await self.queue.get()
+        #     LOGGER.debug(f"Transcription stream sent {len(chunk)} bytes")
+        #     return chunk
+
+        # async def write_async(self, data: bytes) -> None:
+        #     await self.queue.put(data)

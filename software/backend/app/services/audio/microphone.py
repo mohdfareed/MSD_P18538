@@ -13,7 +13,7 @@ from . import LOGGER
 
 
 async def start_microphone(
-    source: Callable[[], Coroutine[None, None, bytes]] | Coroutine,
+    source: Callable[[], bytes | Coroutine[None, None, bytes]],
 ):
     """Start a microphone.
 
@@ -42,18 +42,18 @@ async def start_microphone(
 
 
 async def _listen_to_stream(
-    listener: Callable[[], Coroutine[None, None, bytes]] | Coroutine,
+    listener: Callable[[], bytes | Coroutine[None, None, bytes]],
     event: Event[bytes],
     cancellation_event: Event,
 ):
     try:
         while True:  # read streamed audio data
             if asyncio.iscoroutinefunction(listener):
-                data = await listener()
-            elif asyncio.iscoroutine(listener):
-                data = await listener
+                data: bytes = await listener()
             else:
-                raise TypeError(f"Invalid listener type: {type(listener)}")
+                data = listener()  # type: ignore
+            # else:
+            #     raise TypeError(f"Invalid listener type: {type(listener)}")
 
             # trigger audio data
             await event.trigger(data)
