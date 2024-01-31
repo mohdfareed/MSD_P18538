@@ -1,51 +1,66 @@
-import asyncio
+import logging
 
-from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, WebSocket, WebSocketException, status
 
-from ..services.transcription import LOGGER
-from ..services.transcription import core as transcription
-from ..services.transcription import engines as recognition_engines
+from ..services import transcription
+from ..services.audio import microphones, player, speakers
+from ..services.events import Event, EventHandler
+from ..services.websocket import WebSocketConnection
+
+LOGGER = logging.getLogger(__name__)
 
 router = APIRouter()
-_transcriber = None  # active transcription generator
-_cancellation_token = asyncio.Event()
+_transcription: Event[str] | None = None  # transcription event
 
 
-@router.get("/transcription/", status_code=status.HTTP_200_OK)
-async def start_transcription():
-    global _transcriber
-    if _transcriber is not None:
-        raise HTTPException(
-            status_code=400, detail="Transcription already running"
+@router.websocket("/transcription/stream")
+async def stream_transcription(websocket: WebSocket):
+    global _transcription
+    if _transcription is None:
+        raise WebSocketException(
+            reason="Transcription service is not running",
+            code=status.WS_1002_PROTOCOL_ERROR,
         )
 
-    source = transcription.sr.Microphone(sample_rate=16000)
-    recognizer = recognition_engines.whisper_recognize
-    _transcriber = transcription.transcribe(source, recognizer)
-    _cancellation_token.clear()
-
-    async def _transcription():
-        global _transcriber
-        try:
-            async for transcript in _transcriber:  # type: ignore
-                yield transcript
-                if _cancellation_token.is_set():
-                    break
-        except asyncio.CancelledError or GeneratorExit or KeyboardInterrupt:
-            LOGGER.debug("Transcription interrupted")
-        finally:
-            LOGGER.debug("Transcription stopped")
-            _transcriber = None
-
-    return StreamingResponse(_transcription())
+    socket = WebSocketConnection(websocket)
+    await socket.connect()
+    handler = EventHandler(socket.send)
+    await _transcription.subscribe(handler)
+    LOGGER.warning("Transcription client connected")
 
 
-@router.delete("/transcription/", status_code=status.HTTP_200_OK)
-async def stop_transcription():
-    global _transcriber
-    if _transcriber is None:
-        raise HTTPException(
-            status_code=400, detail="Transcription not running"
-        )
-    _cancellation_token.set()
+@router.websocket("/transcription/start")
+async def start_transcription(websocket: WebSocket):
+    global _transcription
+    assert _transcription is None, "Transcription service is already running"
+    socket = WebSocketConnection(websocket)
+
+    # mic, config = await microphones.create_websocket_mic(socket)
+    # LOGGER.debug("Websocket microphone created. Config: %s", config)
+    mic, config, mic_token = microphones.create_local_mic()  # FIXME: local mic
+    audio_event, audio_token = await player.start_audio_player(mic)
+    LOGGER.debug("Microphone started")
+    speaker_token = await speakers.start_speaker(config, audio_event)
+    LOGGER.debug("Speaker started")
+
+    # start transcription
+    # engine = transcription.engines.WhisperEngine()
+    # (
+    #     _transcription,
+    #     transcription_token,
+    # ) = await transcription.start_transcription(engine, config, audio_event)
+    # await _transcription.subscribe(transcription.create_console_display())
+    # LOGGER.debug("Transcription started")
+
+    async def shutdown():
+        global _transcription
+        await speaker_token()
+        await audio_token()
+        await mic_token()
+        # await transcription_token()
+        _transcription = None
+        LOGGER.debug("Transcription stopped")
+
+    shutdown_callback = EventHandler(shutdown, one_shot=True)
+    await socket.disconnection_event.subscribe(shutdown_callback)
+    await socket.disconnection_event.until_triggered()
