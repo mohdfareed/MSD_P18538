@@ -35,20 +35,12 @@ async def start_transcription(websocket: WebSocket):
     assert _transcription is None, "Transcription service is already running"
     socket = WebSocketConnection(websocket)
 
-    # connect
     # mic, config = await microphones.create_websocket_mic(socket)
     # LOGGER.debug("Websocket microphone created. Config: %s", config)
-    # mic, config = microphones.create_local_mic()  # FIXME: for testing
-    mic, config = microphones.create_file_mic("test.wav")  # FIXME: for testing
-
-    # create microphone
+    mic, config, mic_token = microphones.create_local_mic()  # FIXME: local mic
     audio_event, audio_token = await player.start_audio_player(mic)
     LOGGER.debug("Microphone started")
-
     speaker_token = await speakers.start_speaker(config, audio_event)
-    # file_speaker_token = await speakers.start_file_speaker(
-    #     config, audio_event, "speaker.wav"
-    # )
     LOGGER.debug("Speaker started")
 
     # start transcription
@@ -62,10 +54,10 @@ async def start_transcription(websocket: WebSocket):
 
     async def shutdown():
         global _transcription
-        # await transcription_token()
         await speaker_token()
-        # await file_speaker_token()
         await audio_token()
+        await mic_token()
+        # await transcription_token()
         _transcription = None
         LOGGER.debug("Transcription stopped")
 

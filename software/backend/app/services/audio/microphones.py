@@ -8,11 +8,12 @@ import asyncio
 import io
 import wave
 
-import pyaudio
 from pydub import AudioSegment
 
 from ...models.microphone import MicrophoneConfig
-from ..websocket import LOGGER, WebSocketConnection
+from ..events import EventHandler
+from ..websocket import WebSocketConnection
+from . import LOCAL_AUDIO_SOURCE, LOGGER
 
 
 def create_file_mic(filename: str, chunk_size: int = 1024):
@@ -93,6 +94,7 @@ def create_local_mic():
     Returns:
         Callable[[], Coroutine[bytes]]: The audio source.
         MicrophoneConfig: The audio configuration.
+        EventHandler: The cancellation handler.
     """
 
     mic_config = MicrophoneConfig(
@@ -102,9 +104,10 @@ def create_local_mic():
         num_channels=1,
     )
 
-    p = pyaudio.PyAudio()
-    mic = p.open(
-        format=p.get_format_from_width(mic_config.sample_width),
+    mic = LOCAL_AUDIO_SOURCE.open(
+        format=LOCAL_AUDIO_SOURCE.get_format_from_width(
+            mic_config.sample_width
+        ),
         channels=mic_config.num_channels,
         rate=mic_config.sample_rate,
         input=True,
@@ -113,14 +116,14 @@ def create_local_mic():
 
     def receive_audio():
         nonlocal mic
-        data = mic.read(mic_config.chunk_size, exception_on_overflow=False)
-        wav_data = io.BytesIO()
-        with wave.open(wav_data, "wb") as f:
-            f.setnchannels(mic_config.num_channels)
-            f.setsampwidth(mic_config.sample_width)
-            f.setframerate(mic_config.sample_rate)
-            f.writeframes(data)
+        return mic.read(mic_config.chunk_size, exception_on_overflow=False)
 
-        return data
+    async def close_mic():
+        nonlocal mic
+        mic.stop_stream()
+        mic.close()
+        LOGGER.debug("Microphone stopped")
 
-    return receive_audio, mic_config
+    cancellation_handler = EventHandler(close_mic, one_shot=True)
+
+    return receive_audio, mic_config, cancellation_handler

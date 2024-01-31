@@ -38,8 +38,9 @@ class EventHandler(Generic[P]):
     def __init__(
         self,
         callback: Callable[P, Any],
-        one_shot: bool = False,
         blocking: bool = False,
+        one_shot: bool = False,
+        sequential: bool = False,
         timeout: float = EVENT_TIMEOUT,
     ):
         assert asyncio.iscoroutinefunction(callback) or callable(
@@ -51,6 +52,8 @@ class EventHandler(Generic[P]):
         self.one_shot = one_shot
         """Whether the callback is only triggered once."""
         self.blocking = blocking
+        """Whether the callback blocks the event from proceeding."""
+        self.sequential = sequential
         """Whether the callback blocks future callbacks."""
 
         self._triggered = False  # whether the callback has been triggered
@@ -76,14 +79,17 @@ class EventHandler(Generic[P]):
             finally:
                 self._triggered = True  # callback was triggered
 
-        if self.blocking:
+        if self.sequential:  # block future callbacks
             await self._blocking_queue.put(
                 (handler_with_timeout, args, kwargs)
             )  # schedule callback
             if len(self._running_tasks) != 0:  # queue is already processing
                 return
             task = asyncio.create_task(self._process_blocking_queue())
-        else:
+        elif self.blocking:  # block event loop
+            await handler_with_timeout(*args, **kwargs)
+            return
+        else:  # run in background
             task = asyncio.create_task(handler_with_timeout(*args, **kwargs))
 
         self._running_tasks.add(task)
