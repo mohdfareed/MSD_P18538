@@ -36,8 +36,11 @@ async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
         output=True,
     )
 
+    def write_audio(data: bytes):
+        stream.write(data)
+
     # start listening to microphone
-    handler = EventHandler(stream.write, blocking=True)
+    handler = EventHandler(write_audio, blocking=True)
     await mic_event.subscribe(handler)
 
     async def stop_speaker():

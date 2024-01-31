@@ -51,10 +51,15 @@ class EventHandler(Generic[P]):
         self.one_shot = one_shot
         """Whether the callback is only triggered once."""
         self.blocking = blocking
-        """Whether the callback blocks the event trigger."""
+        """Whether the callback blocks future callbacks."""
+
         self._triggered = False  # whether the callback has been triggered
         self._timeout = timeout  # the timeout of the callback (seconds)
+
+        self._blocking_queue: asyncio.Queue = asyncio.Queue()
+        # queue of callbacks for blocking handlers
         self._running_tasks: set[asyncio.Task] = set()
+        # set of all running tasks, including queue processing task
 
     async def trigger(self, *args: P.args, **kwargs: P.kwargs):
         """Trigger the callback."""
@@ -68,16 +73,33 @@ class EventHandler(Generic[P]):
                 LOGGER.debug(f"{self}: Cancelled")
             except Exception as e:
                 LOGGER.exception(f"{self}: Error executing callback: {e}")
+            finally:
+                self._triggered = True  # callback was triggered
 
-        if self.blocking:  # FIXME: rework to block until callback is done
-            await handler_with_timeout(*args, **kwargs)
+        if self.blocking:
+            await self._blocking_queue.put(
+                (handler_with_timeout, args, kwargs)
+            )  # schedule callback
+            if len(self._running_tasks) != 0:  # queue is already processing
+                return
+            task = asyncio.create_task(self._process_blocking_queue())
         else:
             task = asyncio.create_task(handler_with_timeout(*args, **kwargs))
-            self._running_tasks.add(task)
-            task.add_done_callback(self._running_tasks.discard)
-        self._triggered = True
 
-    async def _handler(self, *args: P.args, **kwargs: P.kwargs) -> Coroutine:
+        self._running_tasks.add(task)
+        task.add_done_callback(self._running_tasks.discard)
+
+    async def _process_blocking_queue(self):
+        while not self._blocking_queue.empty():
+            (
+                handler_with_timeout,
+                args,
+                kwargs,
+            ) = await self._blocking_queue.get()
+            await handler_with_timeout(*args, **kwargs)
+            self._blocking_queue.task_done()
+
+    async def _handler(self, *args: P.args, **kwargs: P.kwargs):
         if asyncio.iscoroutinefunction(self.callback):
             return self.callback(*args, **kwargs)
         elif callable(self.callback):

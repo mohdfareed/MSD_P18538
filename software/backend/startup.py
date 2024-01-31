@@ -18,7 +18,7 @@ def main(debug=False):
 
     setup_environment(debug)
     try:  # start server
-        uvicorn.run(  # TODO: check other uvicorn options
+        uvicorn.run(  # TODO: check available uvicorn options
             "app.main:app",
             host=os.getenv("HOST", ""),
             port=int(os.getenv("PORT") or 0),

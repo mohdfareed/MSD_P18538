@@ -37,7 +37,7 @@ async function startRecording(dotNetReference, callback, configCallback) {
     };
 
     // record in chunks of time (milliseconds)
-    mediaRecorder.start(CHUNK_SIZE);
+    // mediaRecorder.start(CHUNK_SIZE);
 }
 
 async function stopRecording() {
