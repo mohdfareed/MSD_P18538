@@ -13,13 +13,12 @@ def main(debug=False):
     """Starts the backend server and sets up logging.
 
     Args:
-        debug (bool): Whether to log debug messages.
-        log (bool): Whether to log to a file in addition to the console.
+        debug (bool): Whether to start in debug mode and log debug messages.
     """
 
     setup_environment(debug)
     try:  # start server
-        uvicorn.run(  # TODO: check other uvicorn options
+        uvicorn.run(  # TODO: check available uvicorn options
             "app.main:app",
             host=os.getenv("HOST", ""),
             port=int(os.getenv("PORT") or 0),
@@ -27,15 +26,20 @@ def main(debug=False):
             log_config=None,
         )
     except Exception as e:
-        logging.exception(e)
+        LOGGER.exception(e)
         exit(1)
+    finally:
+        LOGGER.debug("Backend server stopped.")
+        logging.shutdown()
 
 
 def setup_environment(debug):
     load_dotenv()
     os.environ["DEBUG"] = str(debug)
+    os.environ["NOLOG"] = str(1)  # don't log on import
     import app
 
+    os.unsetenv("NOLOG")
     LOGGER.info(f"Logging to files at: {os.path.dirname(app.logging_file)}/")
     LOGGER.debug("Debug mode enabled")
 

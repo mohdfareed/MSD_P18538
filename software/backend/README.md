@@ -228,3 +228,25 @@ software/backend
     ├── controllers     # API endpoints
     └── services        # Core logic
 ```
+
+### Dataflow
+
+```mermaid
+graph TD
+    A[Instructor] -->|Audio/Control| B[Raspberry Pi]
+
+    B -->|Audio Data| C[Speaker]
+    B -->|Control Signal| E[Motors]
+    B -->|Transcription Text| D[Display]
+
+    D -->F[Student 1]
+    D -->G[Student 2]
+    D -->H[Student 3]
+
+    subgraph Hardware
+    B
+    C
+    E
+    D
+    end
+```

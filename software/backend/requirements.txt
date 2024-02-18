@@ -1,12 +1,15 @@
 # rest api
 fastapi # rest api framework
-pydantic # data validation
 uvicorn # asgi server
+websockets # websocket server
 
 # transcription
 SpeechRecognition # speech recognition
 openai # whisper recognition engine
-pyaudio # device microphone
+
+# audio
+pyaudio # device microphone and speaker interface
+pydub # audio file manipulation
 
 # control
 gpiozero # raspberry pi gpio interface library

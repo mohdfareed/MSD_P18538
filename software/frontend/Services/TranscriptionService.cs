@@ -1,43 +1,140 @@
-using System.Text;
-using Microsoft.AspNetCore.Components.WebAssembly.Http;
+using System.Net.WebSockets;
+using System.Text.Json;
+using Microsoft.JSInterop;
 
 namespace Services;
 
 public class TranscriptionService
 {
-    private readonly HttpClient _httpClient;
-    private readonly string _route;
+    const string _route = "/transcription/"; // API route
 
-    public TranscriptionService(HttpClient httpClient, Models.GlobalSettings globalSettings)
+    // dependencies
+    private readonly IJSRuntime _jsRuntime;
+    private readonly DotNetObjectReference<TranscriptionService> _objRef;
+    private readonly HttpClient _httpClient; // used to call API
+    private readonly ILogger<TranscriptionService> _logger;
+
+    // routes
+    private readonly string _http_route; // API http route
+    private readonly string _websocket_route; // websocket route
+
+    // state
+    private WebSocketConnection? _socket = null;
+    private Action? _micCancellationTask = null;
+
+
+    public TranscriptionService(HttpClient httpClient,
+    Models.GlobalSettings globalSettings, IJSRuntime JSRuntime,
+    ILogger<TranscriptionService> logger, IServiceProvider serviceProvider)
     {
         _httpClient = httpClient;
-        _route = globalSettings.BackendBaseAddress + "/transcription/";
+        _http_route = globalSettings.BackendHTTPUrl + _route;
+        _websocket_route = globalSettings.BackendWSUrl + _route;
+
+        _jsRuntime = JSRuntime;
+        _objRef = DotNetObjectReference.Create(this);
+        _logger = logger;
     }
 
-    public async IAsyncEnumerable<string> GetTranscriptionStreamAsync()
+    public async Task ReceiveTextStreamAsync(Action<string> handler,
+        CancellationToken cancellationToken = default)
     {
-        // Configure the request
-        using var request = new HttpRequestMessage(HttpMethod.Get, _route);
-        request.SetBrowserResponseStreamingEnabled(true);
+        WebSocketConnection socket = new();
+        string? message;
 
-        // Send the request and get the response
-        using var response = await _httpClient.SendAsync(request,
-        HttpCompletionOption.ResponseHeadersRead);
-        response.EnsureSuccessStatusCode();
-        using var stream = await response.Content.ReadAsStreamAsync();
 
-        // Read the response line by line
-        var bytes = new byte[1024]; // max line length
-        var bytesCount = 0;
-        while ((bytesCount = await stream.ReadAsync(bytes)) > 0)
+        try
         {
-            yield return Encoding.UTF8.GetString(bytes, 0, bytesCount);
-            await Task.Delay(1); // delay to avoid blocking the UI
+            await socket.ConnectAsync(_websocket_route + "stream",
+            cancellationToken);
+
+            message = await socket.ReceiveAsync<string>(cancellationToken);
+            while (message != null)
+            {
+                handler(message);
+                message = await socket.ReceiveAsync<string>(cancellationToken);
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogDebug("Transcription stream cancelled");
+        }
+        catch (WebSocketException ex)
+        {
+            _logger.LogError(ex,
+            "Websocket error occurred receiving transcription");
         }
     }
 
-    public async Task StopTranscriptionAsync(CancellationToken cancellationToken = default)
+    public async Task StartAudioStreamingAsync(Action cancellationAction,
+    CancellationToken cancellationToken = default)
     {
-        await _httpClient.DeleteAsync(_route, cancellationToken);
+        _socket = new WebSocketConnection();
+        _micCancellationTask = cancellationAction;
+        cancellationToken.Register(async () =>
+        {
+            await _jsRuntime.InvokeVoidAsync("stopRecording");
+            await _socket.CloseAsync();
+            _micCancellationTask = null;
+            _socket = null;
+            _logger.LogDebug("Audio streaming cancelled");
+        });
+
+        try
+        {
+            await _socket.ConnectAsync(_websocket_route + "start", cancellationToken);
+            await _jsRuntime.InvokeVoidAsync("startRecording", _objRef,
+            "AudioCaptureCallback", "AudioConfigCallback");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogDebug("Audio streaming cancelled");
+        }
+        catch (WebSocketException ex)
+        {
+            _logger.LogError(ex, "Failed to start audio streaming");
+            _micCancellationTask?.Invoke();
+        }
+    }
+
+    [JSInvokable]
+    public async Task AudioConfigCallback(string config)
+    {
+        try
+        {
+            if (_socket == null) throw new WebSocketException();
+            var micConfig = JsonSerializer.Deserialize<Models.MicConfig>(config)!;
+            await _socket.SendAsync(micConfig);
+        }
+        catch (WebSocketException)
+        {
+            _logger.LogInformation("Mic connection closed");
+            _micCancellationTask?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unknown error occurred configuring mic");
+            _micCancellationTask?.Invoke();
+        }
+    }
+
+    [JSInvokable]
+    public async Task AudioCaptureCallback(byte[] audioData)
+    {
+        try
+        {
+            if (_socket == null) throw new WebSocketException();
+            await _socket.SendAsync(audioData);
+        }
+        catch (WebSocketException)
+        {
+            _logger.LogInformation("Mic connection closed");
+            _micCancellationTask?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unknown error occurred capturing audio");
+            _micCancellationTask?.Invoke();
+        }
     }
 }
