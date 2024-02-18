@@ -1,0 +1,14 @@
+// Adhoc network info, ie 
+
+auto lo
+iface lo inet loopback
+iface eth0 inet dhcp
+
+auto wlan0
+iface wlan0 inet static
+address 192.168.4.1 // Can change subnet if desired, try to avoid 192.168.1
+netmask 255.255.255.0
+wireless-channel 4 // Can change if it this channel seems to be crowded 
+wireless-essid RitchieBot
+wireless-mode ad-hoc
+// wireless-key p18538 // Can change the network password here.. 

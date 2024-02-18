@@ -8,6 +8,10 @@
 # Update all packages
 apt update && apt upgrade
 
+# For adhoc network ensure we have dhcp server downloaded and configured to automaticly handle Ip hosting
+apt install isc-dhcp-server
+cat ~/MSD_P18538/software/backend/app/services/network/dhcpd.conf >> /etc/dhcp/chcpd.conf
+
 # Install Python 3.12.1 and set as the primary version 
 apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev  libsqlite3-dev
 
