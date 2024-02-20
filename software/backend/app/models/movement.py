@@ -5,5 +5,6 @@ from dataclasses import dataclass
 class Movement:
     """Movement instructions model."""
 
+
+    direction: float
     speed: float
-    angle: float

@@ -1,4 +1,4 @@
-from gpiozero import Motor, Servo
+from gpiozero import PhaseEnabledMotor, DigitalOutputDevice
 
 from ...models.movement import Movement
 from . import LOGGER
@@ -17,20 +17,12 @@ from . import LOGGER
 MOTOR_SPEED = 6 # High is fast, and low is slow. Not sure if this matters for for reverse..
 MOTOR_FORWARD = 13
 MOTOR_REVERSE = 19 
-STEERING_MOTOR = 18 # Should be noted that this not a servo, but rather just another 
+STEERING_MOTOR = 18 # Should be noted that this not a servo, but rather just another   
 
-# servo = Servo(SERVO)
-# motor_left = Motor(
-#     forward=MOTOR_LEFT_FORWARD, backward=MOTOR_LEFT_BACKWARD, pwm=True
-# )
-# motor_right = Motor(
-#     forward=MOTOR_RIGHT_FORWARD, backward=MOTOR_RIGHT_BACKWARD, pwm=True
-# )
-
-# servo.mid()
-# motor_left.stop()
-# motor_right.stop()
-
+# For now very this is a digital signal until we know that pwm can work
+motor_speed = DigitalOutputDevice(MOTOR_SPEED, True, False)
+motor_forward = DigitalOutputDevice(MOTOR_FORWARD, True, False)
+motor_reverse = DigitalOutputDevice(MOTOR_REVERSE, True, False)
 
 def drive(movement: Movement):
     """Drive the car.
@@ -39,10 +31,14 @@ def drive(movement: Movement):
         movement (Movement): The movement to drive the car with.
     """
 
-    # servo.value = movement.angle
-    if movement.speed > 0:
-        motor_left.forward(movement.speed)  # type: ignore
-        motor_right.forward(movement.speed)  # type: ignore
+    if movement.speed > 0: 
+        motor_speed.on()
     else:
-        motor_left.backward(-movement.speed)  # type: ignore
-        motor_right.backward(-movement.speed)  # type: ignore
+        motor_speed.off()
+
+    if movement.direction > 0:
+        motor_forward.on()
+        motor_reverse.off()
+    else:
+        motor_forward.off()
+        motor_reverse.on()
