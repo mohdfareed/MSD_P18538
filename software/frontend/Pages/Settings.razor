@@ -1,0 +1,26 @@
+@page "/settings"
+@using MudBlazor
+
+
+<PageTitle>Settings</PageTitle>
+
+<MudToggleIconButton @bind-Toggled="@BluetoothOn"
+                     Icon="@Icons.Material.Filled.BluetoothDisabled" Color="@Color.Error" Title="Off"
+                     ToggledIcon="@Icons.Material.Filled.Bluetooth" ToggledTitleTitle="On"/>
+
+<span>Bluetooth is @(BluetoothOn ? "On" : "Off")</span>
+<MudToggleIconButton @bind-Toggled="@WifiOn"
+                     Icon="@Icons.Material.Filled.WifiOff" Color="@Color.Error" Title="Off"
+                     ToggledIcon="@Icons.Material.Filled.Wifi" ToggledTitleTitle="On"/>
+
+<span>Self Hosted Network is @(WifiOn ? "On" : "Off")</span>
+
+@code {
+    public bool BluetoothOn { get; set; }
+    public bool WifiOn { get; set; }
+}
+
+
+
+
+
