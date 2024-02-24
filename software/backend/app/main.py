@@ -2,11 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import FRONTEND_URL, LOGGER
-from .controllers import control, transcription
+from .controllers import configurator, control, transcription
 
 app = FastAPI()
 app.include_router(control.router)
 app.include_router(transcription.router)
+app.include_router(configurator.router)
 
 # setup CORS
 app.add_middleware(

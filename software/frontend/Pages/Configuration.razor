@@ -36,11 +36,7 @@
 
     private async Task LoadConfig()
     {
-        @* config = await ConfigurationService.GetConfigAsync(); *@
-        config = new Models.Config
-            {
-                TranscriptionEngine = "GoogleSpeechToText"
-            };
+        config = await ConfigurationService.GetConfigAsync();
     }
 
     private async Task ApplyChanges()

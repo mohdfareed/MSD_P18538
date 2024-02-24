@@ -15,8 +15,8 @@ from rich.logging import RichHandler
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 LOGGER = logging.getLogger(__name__)
 
-app_dir = os.path.dirname(os.path.realpath(__file__))
-logging_file = os.path.join(os.path.dirname(app_dir), "logs", "backend.log")
+data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
+logging_file = os.path.join(data_dir, "logs", "backend.log")
 debug = os.getenv("DEBUG", "False").lower() == "true"
 
 reduced_logging_modules = [

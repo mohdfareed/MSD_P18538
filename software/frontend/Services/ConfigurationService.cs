@@ -51,7 +51,7 @@ public class ConfigurationService
             {
                 { "value", value }
             };
-            var response = await _httpClient.PostAsync(_http_route + key,
+            var response = await _httpClient.PutAsync(_http_route + key,
             new FormUrlEncodedContent(parameters));
             response.EnsureSuccessStatusCode();
         }

@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 import os
-from dataclasses import fields
+from dataclasses import asdict, fields
 from typing import Callable
 
 from .. import data_dir
@@ -29,7 +29,7 @@ validators: dict[str, list[Callable[..., None]]] = {}
 _config_lock = asyncio.Lock()  # lock for accessing the configuration
 
 
-async def set_config(new_config: Config) -> Config:
+async def set_config(new_config: Config) -> dict:
     """Update the active configuration.
 
     Args:
@@ -45,15 +45,20 @@ async def set_config(new_config: Config) -> Config:
         new_value = getattr(new_config, field.name)
         if field.name in validators:
             for validator in validators[field.name]:
-                validator(new_value)
+                try:
+                    validator(new_value)
+                except Exception as e:
+                    raise ValidationError(
+                        f"Invalid value for {field.name}: {new_value}"
+                    ) from e
 
     # lock to update and store new config
     async with _config_lock:
         config = new_config
-        return _store_config(config)
+        return asdict(_store_config(config))
 
 
-async def get_config() -> Config:
+async def get_config() -> dict:
     """Get the active configuration.
 
     Returns:
@@ -63,7 +68,7 @@ async def get_config() -> Config:
 
     # wait for the lock (therefore config) to be available
     async with _config_lock:
-        return config
+        return asdict(config)
 
 
 def register_validator(key: str, validator: Callable[..., None]):
@@ -77,19 +82,9 @@ def register_validator(key: str, validator: Callable[..., None]):
         Callable[..., bool]: The validator function.
     """
     # check if config has the field
-    if key not in fields(Config):
-        raise ValueError(f"Invalid configuration key: {key}")
     field = next(f for f in fields(Config) if f.name == key)
-
-    # check if the validator has the correct signature (field.type) -> None
-    if not callable(validator):
-        raise ValueError("Validator must be a callable")
-    if not hasattr(validator, "__annotations__"):
-        raise ValueError("Validator must have type annotations")
-    if list(validator.__annotations__.values()) != [field.type, None]:
-        raise ValueError(
-            "Validator must have the signature (field.type) -> None"
-        )
+    if field is None:
+        raise ValueError(f"Invalid configuration key: {key}")
 
     if key not in validators:
         validators[key] = []
@@ -114,13 +109,19 @@ def _load_config(config_file: str) -> Config:
 def _store_config(config: Config) -> Config:
     try:
         with open(config_file, "w") as file:
-            json.dump(config, file, indent=4)
+            json.dump(asdict(config), file, indent=4)
         return config
     except Exception as e:
         LOGGER.exception(f"Error storing configuration: {e}")
         return config
     finally:
         LOGGER.debug("Configuration stored")
+
+
+class ValidationError(Exception):
+    """A configuration validation error."""
+
+    ...
 
 
 LOGGER.info("Configurator service started")
