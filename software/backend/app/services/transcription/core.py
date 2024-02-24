@@ -6,11 +6,7 @@ import speech_recognition as sr
 from ...models.microphone import MicrophoneConfig
 from ..events import Event, EventHandler
 from . import LOGGER, recorder
-from .engines import (
-    RecognitionEngine,
-    RecognitionEngineError,
-    UnrecognizedAudioError,
-)
+from .engines import RecognitionEngineError, UnrecognizedAudioError, recognize
 
 RECORD_TIMEOUT = 0.5
 """The maximum audio recording chunk size (seconds)."""
@@ -25,9 +21,7 @@ _PHRASE_TIMEOUT = 2.5  #  the maximum pause between phrases (seconds)
 _MIN_RECORD_DURATION = 0.5  # the minimum recording duration (seconds)
 
 
-async def start_transcription(
-    engine: RecognitionEngine, mic_config: MicrophoneConfig, mic_event: Event
-):
+async def start_transcription(mic_config: MicrophoneConfig, mic_event: Event):
     """Start transcribing audio from a microphone using a speech recognition
     engine.
 
@@ -43,10 +37,10 @@ async def start_transcription(
 
     # initialize transcription
     transcript_event = Event[str]()
-    transcript_handler = await _create_handler(mic_config, engine)
+    transcript_handler = await _create_handler(mic_config)
     # start recording and transcribing
     record_event, record_canceller = await recorder.start_recorder(
-        engine, mic_config, mic_event
+        mic_config, mic_event
     )
     await record_event.subscribe(transcript_handler)
 
@@ -60,9 +54,7 @@ async def start_transcription(
     return transcript_event, cancellation_event
 
 
-async def _create_handler(
-    mic_config: MicrophoneConfig, engine: RecognitionEngine
-):
+async def _create_handler(mic_config: MicrophoneConfig):
     transcript_event = Event[str]()
     phrase_time = datetime.min  # last time new audio was received
     phrase_buffer = bytes()  # buffer of incomplete phrase audio
@@ -98,7 +90,7 @@ async def _create_handler(
                 mic_config.sample_width,
             )
             # broadcast the transcript
-            await transcript_event.trigger(await engine.recognize(audio_data))
+            await transcript_event.trigger(await recognize(audio_data))
 
         except UnrecognizedAudioError:
             return  # wait for more audio data

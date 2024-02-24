@@ -7,7 +7,7 @@ import speech_recognition as sr
 from ...models.microphone import MicrophoneConfig
 from ..events import Event, EventHandler
 from . import LOGGER
-from .engines import RecognitionEngine
+from .engines import recognizer
 
 RECORD_TIMEOUT = 0.5
 """The maximum audio recording chunk size (seconds)."""
@@ -17,9 +17,7 @@ DYNAMIC_ENERGY_THRESHOLD = False
 """Whether to dynamically adjust the energy threshold for recording audio."""
 
 
-async def start_recorder(
-    engine: RecognitionEngine, mic_config: MicrophoneConfig, mic_event: Event
-):
+async def start_recorder(mic_config: MicrophoneConfig, mic_event: Event):
     """Start recording audio from a microphone using a speech recognition
     engine.
 
@@ -34,8 +32,8 @@ async def start_recorder(
     """
 
     # configure the engine's recognizer
-    engine.recognizer.energy_threshold = ENERGY_THRESHOLD
-    engine.recognizer.dynamic_energy_threshold = DYNAMIC_ENERGY_THRESHOLD
+    recognizer.energy_threshold = ENERGY_THRESHOLD
+    recognizer.dynamic_energy_threshold = DYNAMIC_ENERGY_THRESHOLD
 
     # buffer = io.BytesIO()
     # with wave.open(buffer, "wb") as f:
@@ -54,12 +52,12 @@ async def start_recorder(
 
     with source:  # adjust for ambient noise
         LOGGER.info("Adjusting recognizer for ambient noise")
-        engine.recognizer.adjust_for_ambient_noise(source)
+        recognizer.adjust_for_ambient_noise(source)
         LOGGER.info("Recognizer adjusted")
 
     # start recording in the background
     recording_event = Event[sr.AudioData]()
-    stopper = engine.recognizer.listen_in_background(
+    stopper = recognizer.listen_in_background(
         source,
         recording_event.trigger,
         phrase_time_limit=RECORD_TIMEOUT,
