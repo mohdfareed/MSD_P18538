@@ -3,6 +3,12 @@
 
 app_dir='~/MSD_P18538' # The directory where the app is located
 
+# Ensure root privileges
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+
 # Clone the repository if it doesn't exist
 if [ ! -d "$app_dir" ]; then
   git clone https://github.com/BrianMonclus/MSD_P18538.git $app_dir
@@ -11,6 +17,10 @@ if [ ! -d "$app_dir" ]; then
 sudo apt update && sudo apt upgrade -y
 # Setup .bashrc
 echo "source $app_dir/software/bashrc" >> ~/.bashrc
+
+# For adhoc network ensure we have dhcp server downloaded and configured to automaticly handle Ip hosting
+sudo apt install isc-dhcp-server
+sudo cp ~/MSD_P18538/software/backend/app/services/network/dhcpd.conf /etc/dhcp/dhcpd.conf
 
 # Install dependencies for building python from source:
 # https://devguide.python.org/getting-started/setup-building/#build-dependencies
