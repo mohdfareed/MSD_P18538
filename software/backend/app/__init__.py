@@ -15,10 +15,13 @@ from rich.logging import RichHandler
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 LOGGER = logging.getLogger(__name__)
 
-data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
+data_dir = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "data"
+)
+"""The data directory. Used for persistent data storage."""
+
 logging_file = os.path.join(data_dir, "logs", "backend.log")
 debug = os.getenv("DEBUG", "False").lower() == "true"
-
 reduced_logging_modules = [
     "uvicorn.error",
 ]  # modules with reduced logging level
