@@ -23,7 +23,7 @@ config: Config
 """The configuration settings."""
 config_file = os.path.join(data_dir, "config.json")
 """The configuration file path."""
-validators: list[Callable] = []
+validators: list[Callable[[Config], None]] = []
 """The configuration validators. Called when a setting is changed."""
 
 _config_lock = asyncio.Lock()  # lock for accessing the configuration
@@ -50,6 +50,7 @@ async def set_config(new_config: Config) -> dict:
             try:  # run all validators
                 validator(new_config)
             except Exception as e:
+                LOGGER.exception(f"Error validating config: {e}")
                 config = prev_config  # restore the previous configuration
                 raise ValidationError from e  # raise the error
 
@@ -69,7 +70,7 @@ async def get_config() -> dict:
         return asdict(config)
 
 
-def register_validator(validator: Callable):
+def register_validator(validator: Callable[[Config], None]):
     """Register a configuration validator that is called when any setting is
     changed.
 
@@ -77,7 +78,7 @@ def register_validator(validator: Callable):
         validator (Callable): The validator function.
     """
 
-    validator()  # run the validator on the active configuration
+    validator(config)  # run the validator on the active configuration
     validators.append(validator)
 
 

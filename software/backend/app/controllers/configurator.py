@@ -17,7 +17,7 @@ async def get_config():
     return config
 
 
-@router.put("/config")
+@router.post("/config")
 async def set_configs(new_config: Config):
     try:
         await configurator.set_config(new_config)

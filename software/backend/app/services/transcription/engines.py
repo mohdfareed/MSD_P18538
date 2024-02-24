@@ -9,6 +9,7 @@ import asyncio
 
 import speech_recognition as sr
 
+from ...models.config import Config
 from ..configurator import config, register_validator
 
 recognizer = sr.Recognizer()
@@ -64,7 +65,7 @@ engines = {
 }
 
 
-def validate_engine():
+def validate_engine(config: Config):
     global active_engine
     try:
         active_engine = engines[config.transcription_engine]

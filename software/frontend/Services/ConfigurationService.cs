@@ -43,16 +43,13 @@ public class ConfigurationService
         }
     }
 
-    public async Task SetConfigAsync(string key, string value)
+    public async Task SetConfigAsync(Models.Config config)
     {
         try
         {
-            var parameters = new Dictionary<string, string>
-            {
-                { "value", value }
-            };
-            var response = await _httpClient.PutAsync(_http_route + key,
-            new FormUrlEncodedContent(parameters));
+            var json = JsonSerializer.Serialize(config);
+            using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+            using HttpResponseMessage response = await _httpClient.PostAsync(_http_route, content);
             response.EnsureSuccessStatusCode();
         }
         catch (HttpRequestException ex)

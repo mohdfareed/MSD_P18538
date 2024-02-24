@@ -1,6 +1,7 @@
 @page "/configuration"
 @inject Services.ConfigurationService ConfigurationService
 @using MudBlazor
+@inject ISnackbar Snackbar
 
 <PageTitle>Configuration</PageTitle>
 <MudText Typo="Typo.h3" Class="mb-3">Current Configuration</MudText>
@@ -11,9 +12,8 @@
         <MudStack Row="true" AlignItems="AlignItems.End">
             @* Example of drop-down setting *@
             <MudSelect Label="Transcription Engine" @bind-Value="config.TranscriptionEngine">
-                <MudSelectItem Value="@("GoogleSpeechToText")">Google Speech-to-Text</MudSelectItem>
-                <MudSelectItem Value="@("AzureSpeechToText")">Azure Speech-to-Text</MudSelectItem>
-                <MudSelectItem Value="@("AmazonTranscribe")">Amazon Transcribe</MudSelectItem>
+                <MudSelectItem Value="@("google")">Google (Free)</MudSelectItem>
+                <MudSelectItem Value="@("whisper")">OpenAI Whisper</MudSelectItem>
             </MudSelect>
             @* Config info *@
             <MudTooltip Text="Engine used for transcribing audio data.">
@@ -25,7 +25,7 @@
 
     <MudCardActions>
         <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ApplyChanges">Apply Changes</MudButton>
-        <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="OnInitializedAsync">Reset</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="LoadConfig">Reset</MudButton>
     </MudCardActions>
 </MudCard>
 
@@ -41,8 +41,18 @@
 
     private async Task ApplyChanges()
     {
-        @* await ConfigurationService.SetConfigAsync(config); *@
-        await LoadConfig();
+        try
+        {
+            await ConfigurationService.SetConfigAsync(config);
+        }
+        catch (Exception e)
+        {
+            Snackbar.Add(e.Message, Severity.Error);
+        }
+        finally
+        {
+            await LoadConfig();
+        }
     }
 
     override protected async Task OnInitializedAsync()
