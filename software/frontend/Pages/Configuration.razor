@@ -1,0 +1,62 @@
+@page "/configuration"
+@inject Services.ConfigurationService ConfigurationService
+@using MudBlazor
+@inject ISnackbar Snackbar
+
+<PageTitle>Configuration</PageTitle>
+<MudText Typo="Typo.h3" Class="mb-3">Current Configuration</MudText>
+<MudCard>
+    <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
+
+        @* Single confing setting *@
+        <MudStack Row="true" AlignItems="AlignItems.End">
+            @* Example of drop-down setting *@
+            <MudSelect Label="Transcription Engine" @bind-Value="config.TranscriptionEngine">
+                <MudSelectItem Value="@("google")">Google (Free)</MudSelectItem>
+                <MudSelectItem Value="@("whisper")">OpenAI Whisper</MudSelectItem>
+            </MudSelect>
+            @* Config info *@
+            <MudTooltip Text="Engine used for transcribing audio data.">
+                <MudIcon Icon="@Icons.Material.Filled.Info" />
+            </MudTooltip>
+        </MudStack>
+
+    </MudCardContent>
+
+    <MudCardActions>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ApplyChanges">Apply Changes</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="LoadConfig">Reset</MudButton>
+    </MudCardActions>
+</MudCard>
+
+
+
+@code {
+    private Models.Config config = new();
+
+    private async Task LoadConfig()
+    {
+        config = await ConfigurationService.GetConfigAsync();
+    }
+
+    private async Task ApplyChanges()
+    {
+        try
+        {
+            await ConfigurationService.SetConfigAsync(config);
+        }
+        catch (Exception e)
+        {
+            Snackbar.Add(e.Message, Severity.Error);
+        }
+        finally
+        {
+            await LoadConfig();
+        }
+    }
+
+    override protected async Task OnInitializedAsync()
+    {
+        await LoadConfig();
+    }
+}
