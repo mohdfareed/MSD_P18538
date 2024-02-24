@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 import os
-from dataclasses import asdict, fields
+from dataclasses import asdict
 from typing import Callable
 
 from .. import data_dir
@@ -23,7 +23,7 @@ config: Config
 """The configuration settings."""
 config_file = os.path.join(data_dir, "config.json")
 """The configuration file path."""
-validators: dict[str, list[Callable[..., None]]] = {}
+validators: list[Callable] = []
 """The configuration validators. Called when a setting is changed."""
 
 _config_lock = asyncio.Lock()  # lock for accessing the configuration
@@ -36,25 +36,23 @@ async def set_config(new_config: Config) -> dict:
         new_config (Config): The new configuration.
 
     Returns:
-        Config: The new configuration.
+        dict: The updated configuration settings.
     """
     global config
 
-    # validate new config
-    for field in fields(new_config):
-        new_value = getattr(new_config, field.name)
-        if field.name in validators:
-            for validator in validators[field.name]:
-                try:
-                    validator(new_value)
-                except Exception as e:
-                    raise ValidationError(
-                        f"Invalid value for {field.name}: {new_value}"
-                    ) from e
+    prev_config = config  # backup the previous configuration
+    LOGGER.debug(f"Updating config from {prev_config} to {new_config}")
 
-    # lock to update and store new config
+    # validate the new configuration
     async with _config_lock:
-        config = new_config
+        config = new_config  # update the configuration
+        for validator in validators:
+            try:  # run all validators
+                validator(new_config)
+            except Exception as e:
+                config = prev_config  # restore the previous configuration
+                raise ValidationError from e  # raise the error
+
         return asdict(_store_config(config))
 
 
@@ -62,7 +60,7 @@ async def get_config() -> dict:
     """Get the active configuration.
 
     Returns:
-        Config: The active configuration.
+        dict: The configuration settings.
     """
     global config
 
@@ -71,24 +69,16 @@ async def get_config() -> dict:
         return asdict(config)
 
 
-def register_validator(key: str, validator: Callable[..., None]):
-    """Register a configuration validator.
+def register_validator(validator: Callable):
+    """Register a configuration validator that is called when any setting is
+    changed.
 
     Args:
-        key (str): The configuration key.
-        validator (Callable[..., bool]): The validator function.
-
-    Returns:
-        Callable[..., bool]: The validator function.
+        validator (Callable): The validator function.
     """
-    # check if config has the field
-    field = next(f for f in fields(Config) if f.name == key)
-    if field is None:
-        raise ValueError(f"Invalid configuration key: {key}")
 
-    if key not in validators:
-        validators[key] = []
-    validators[key].append(validator)
+    validator()  # run the validator on the active configuration
+    validators.append(validator)
 
 
 def _load_config(config_file: str) -> Config:
