@@ -1,0 +1,10 @@
+[Unit]
+Description=Frontend Service
+
+[Service]
+Type=simple
+Restart=on-failure
+ExecStart=/bin/bash -c 'source ~/.bashrc && ~/app/software/frontend/startup.py'
+
+[Install]
+WantedBy=default.target
