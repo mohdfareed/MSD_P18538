@@ -1,0 +1,10 @@
+[Unit]
+Description=Backend Service
+
+[Service]
+Type=simple
+Restart=on-failure
+ExecStart=/bin/bash -c 'source ~/.bashrc && pyenv activate backend && ~/app/software/backend/startup.py'
+
+[Install]
+WantedBy=default.target
