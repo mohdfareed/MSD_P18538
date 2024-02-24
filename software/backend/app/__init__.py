@@ -15,9 +15,9 @@ from rich.logging import RichHandler
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 LOGGER = logging.getLogger(__name__)
 
-data_dir = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "data"
-)
+app_dir = os.path.dirname(os.path.realpath(__file__))
+"""The application directory."""
+data_dir = os.path.join(os.path.dirname(app_dir), "data")
 """The data directory. Used for persistent data storage."""
 
 logging_file = os.path.join(data_dir, "logs", "backend.log")
