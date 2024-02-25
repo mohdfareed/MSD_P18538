@@ -9,15 +9,16 @@ The project is written in Python, and uses the [FastAPI](https://fastapi.tiangol
 
 ## Requirements
 
-- [Python >=3.11](https://www.python.org/downloads/release/python-370/)
+- [Python >=3.12](https://www.python.org/downloads/release/python-370/)
 
 ## Development Setup
 
 ```sh
-cd software/backend # change directory to the backend
-./setup.sh # setup environment and installs dependencies
-source venv/bin/activate # activate virtual environment
-./startup.py --debug # start the backend server in debug mode
+cd software/backend             # change directory to the backend
+python3 -m venv .venv           # create a virtual environment
+source .venv/bin/activate       # activate virtual environment
+pip install -r requirements.txt # install dependencies
+./startup.py --debug            # start the backend server in debug mode
 ```
 
 Test the backend by sending a request to the server:
@@ -42,63 +43,98 @@ content-type: application/json
 
 The backend is designed to be modular, with each component being responsible for a specific task. The following components are included:
 
-- **Interfaces**: They are responsible for providing a method of communication with the backend; captures user commands and sends them to the backend, and displays responses from the backend. These can include a web interface, a command-line interface, or a wireless controller.
-- **Routers**: These are the endpoints that the frontend communicates with. They are responsible for translating frontend commands into backend commands, and for returning responses to the frontend. They define the project's API.
+- **Interfaces (frontend)**: They are responsible for providing a method of communication with the backend; captures user commands and sends them to the backend, and displays responses from the backend. These can include a web interface, a command-line interface, or a wireless controller.
+- **Controllers**: These are the endpoints that the frontend communicates with. They are responsible for translating frontend commands into backend commands, and for returning responses to the frontend. They define the project's API.
 - **Services**: These are the components that are responsible for executing backend commands. They are responsible for controlling the robot's hardware, and for configuring the robot. These define the core logic of the project.
 
 ```mermaid
 sequenceDiagram
     user ->> frontend: Command
-    frontend ->> router: HTTP requests
-    router ->> service: Calls
+    frontend ->> controller: HTTP request
+    controller ->> service: Calls
     service ->> hardware: Controls
     hardware -->> service: Reports
-    service -->> router: Returns
-    router -->> frontend: Response
+    service -->> controller: Returns
+    controller -->> frontend: Response
     frontend -->> user: Response
 ```
 
+### Backend Application
+
+The backend application is responsible for routing requests to the appropriate controller, which then calls the appropriate services. The following is a class diagram of the backend application:
+
 ```mermaid
 classDiagram
-    class backend {
-        +main.py
+    class backend_app {
+        +main()
     }
 
-    class control {
-        +motor.py
-        +servo.py
-        +speaker.py
+    namespace controllers {
+        class configuration_controller {
+            +get_config() dict
+            +set_config(dict config)
+        }
+
+        class transcription_controller {
+            +start_transcription(websocket~bytes~ audio_data)
+            +stream_transcription(WebSocket~str~ transcript)
+        }
     }
 
-    class controllers {
-        +bluetooth.py
-        +wifi.py
+    namespace models {
+        class configuration_model {
+            +str transcription_engine
+        }
+
+        class microphone_model {
+            +int sample_rate
+            +int sample_width
+            +int num_channels
+            +int chunk_size
+        }
     }
 
-    class routers {
-        +control.py
-        +system.py
+    namespace services {
+        class transcription {
+            +start_transcription(microphone_model config, event audio) event transcript
+        }
+
+        class audio {
+            +create_websocket_mic() microphone_model config
+            +start_audio_player(microphone_model config) event audio_data
+            +start_speaker(microphone_model config, event audio_data)
+        }
+
+        class network {
+            +update_interface(str interface) int status
+        }
+
+        class configurator {
+            +get_config() configuration_model
+            +set_config(configuration_model config)
+        }
+
+        class event {
+            +subscribe(event_handler handler)
+            +unsubscribe(event_handler handler)
+            +trigger(event_data data)
+        }
     }
 
-    class transcription {
-        +engines.py
-        +transcribe(source, engine): str[]
-    }
+    backend_app --> configuration_controller
+    backend_app --> transcription_controller
 
-    backend --|> control : includes
-    backend --|> routers : includes
-    backend --|> transcription : includes
-    backend --|> controllers : includes
-    routers ..> control : interacts with
-    routers ..> transcription : interacts with
-    routers ..> controllers : interacts with
+    configuration_controller --> configurator
+    transcription_controller --> transcription
+    transcription_controller --> audio
 
-    control --|> motor : includes
-    control --|> servo : includes
-    control --|> speaker : includes
-    controllers --|> bluetooth : includes
-    controllers --|> wifi : includes
-    transcription --|> engines : includes
+    transcription --> configurator
+    transcription --> event
+    audio --> event
+
+    network --> configurator
+    audio --> microphone_model
+    configurator --> configuration_model
 ```
 
 ### Live Transcription
@@ -220,13 +256,12 @@ software/backend
 ├── setup.sh            # Setup script for development
 ├── startup.py          # Entry point
 ├── requirements.txt    # Dependencies
-├── logs                # Log files
-├── tests               # Unit tests
-└── app                 # Backend application
+├── data/               # Data files, including logs and configuration
+└── app/                # Backend application
     ├── main.py         # Backend entry point
-    ├── models          # Models of data (pydantic)
-    ├── controllers     # API endpoints
-    └── services        # Core logic
+    ├── models/         # Models of data objects (without logic)
+    ├── controllers/    # API endpoints
+    └── services/       # Core logic
 ```
 
 ### Dataflow
