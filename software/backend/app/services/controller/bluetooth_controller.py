@@ -6,7 +6,7 @@ a window that must be in focus for events to be captured. This can be resolved
 by running a separate python script that captures the events and sends them to
 the engine via a socket.
 """
-import pygame
+import pygame 
 
 # Initialize Controllers
 pygame.joystick.init()

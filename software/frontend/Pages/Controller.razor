@@ -1,0 +1,48 @@
+@page "/controller"
+@inject Services.ConfigurationService ConfigurationService
+@using MudBlazor
+@inject ISnackbar Snackbar
+
+<PageTitle>Contoroller</PageTitle>
+
+<MudGrid >
+    <MudItem xs="6" Style="display: flex; flex-direction: column; justify-content: flex-start; align-items: end;">
+        <MudIconButton Color="Color.Primary" Icon="@Icons.Material.Filled.KeyboardArrowUp" 
+        @onmousedown="@(() => RobotCTL("forward", true))" @onmouseup="@(() => RobotCTL("forward", false))">
+        </MudIconButton>
+        <MudIconButton Color="Color.Primary" Icon="@Icons.Material.Filled.KeyboardArrowDown"
+        @onmousedown="@(() => RobotCTL("backwards", true))" @onmouseup="@(() => RobotCTL("blackwards", false))">
+        </MudIconButton>
+    </MudItem>
+    <MudItem xs="6" Style="display: flex; justify-content: flex-end; align-items: end;">
+        <div>
+            <MudIconButton Color="Color.Primary" Icon="@Icons.Material.Filled.KeyboardArrowLeft"
+            @onmousedown="@(() => RobotCTL("left", true))" @onmouseup="@(() => RobotCTL("left", false))">
+            </MudIconButton>
+            <MudIconButton Color="Color.Primary" Icon="@Icons.Material.Filled.KeyboardArrowRight"
+            @onmousedown="@(() => RobotCTL("right", true))" @onmouseup="@(() => RobotCTL("right", false))">
+            </MudIconButton>    
+        </div>
+    </MudItem>
+</MudGrid>
+
+
+@code {
+    private async Task RobotCTL(string direction, bool set)
+    {
+        switch (direction)
+        {
+            case "forward":
+                break;
+            case "backwards":
+                break;
+            case "right":
+                break;
+            case "left":
+                break;
+            default:
+                Snackbar.Add("Invalid direction", Severity.Error);
+                break;
+        }
+    }
+}
