@@ -21,6 +21,22 @@
             </MudTooltip>
         </MudStack>
 
+        <MudStack Row="true" AlignItems="AlignItems.End">
+            <MudToggleIconButton @bind-Toggled="@config.BluetoothOn"
+                     Icon="@Icons.Material.Filled.BluetoothDisabled" Color="@Color.Error" Title="Off"
+                     ToggledIcon="@Icons.Material.Filled.Bluetooth" ToggledTitleTitle="On"/>
+
+            <span>Bluetooth is @(config.BluetoothOn ? "On" : "Off")</span>
+        </MudStack>
+
+        <MudStack Row="true" AlignItems="AlignItems.End">
+            <MudToggleIconButton @bind-Toggled="@config.AdhocOn"
+                            Icon="@Icons.Material.Filled.WifiOff" Color="@Color.Error" Title="Off"
+                            ToggledIcon="@Icons.Material.Filled.Wifi" ToggledTitleTitle="On"/>
+
+            <span>Self Hosted Network is @(config.AdhocOn ? "On" : "Off")</span>
+        </MudStack>
+
     </MudCardContent>
 
     <MudCardActions>
@@ -28,7 +44,6 @@
         <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="LoadConfig">Reset</MudButton>
     </MudCardActions>
 </MudCard>
-
 
 
 @code {
