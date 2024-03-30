@@ -35,9 +35,12 @@ async def start_transcription(websocket: WebSocket):
     assert _transcription is None, "Transcription service is already running"
     socket = WebSocketConnection(websocket)
 
-    # mic, config = await microphones.create_websocket_mic(socket)
-    # LOGGER.debug("Websocket microphone created. Config: %s", config)
-    mic, config, mic_token = microphones.create_local_mic()  # FIXME: local mic
+    # start microphone
+    mic, config, mic_token = await microphones.create_websocket_mic(socket)
+    LOGGER.debug("Websocket microphone created. Config: %s", config)
+    # mic, config, mic_token = microphones.create_local_mic()
+
+    # connect mic and speaker through audio player
     audio_event, audio_token = await player.start_audio_player(mic)
     LOGGER.debug("Microphone started")
     speaker_token = await speakers.start_speaker(config, audio_event)

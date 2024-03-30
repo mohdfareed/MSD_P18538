@@ -26,6 +26,7 @@ def create_file_mic(filename: str, chunk_size: int = 1024):
     Returns:
         Callable[[], Coroutine[bytes]]: The audio source.
         MicrophoneConfig: The audio configuration.
+        CancelHandler: The cancellation handler.
     """
 
     with wave.open(filename, "rb") as file:
@@ -49,7 +50,9 @@ def create_file_mic(filename: str, chunk_size: int = 1024):
         nonlocal data_queue
         return await data_queue.get()
 
-    return player, config
+    cancellation_handler = EventHandler(data_queue.join, one_shot=True)
+
+    return player, config, cancellation_handler
 
 
 async def create_websocket_mic(websocket: WebSocketConnection):
@@ -62,6 +65,7 @@ async def create_websocket_mic(websocket: WebSocketConnection):
     Returns:
         Callable[[], Coroutine[bytes]]: The audio source.
         MicrophoneConfig: The audio configuration.
+        EventHandler: The cancellation handler.
     """
 
     await websocket.connect()
@@ -84,7 +88,9 @@ async def create_websocket_mic(websocket: WebSocketConnection):
         audio_segment.export(wav_stream, format="wav")
         return wav_stream.getvalue()
 
-    return receive_audio, config
+    cancellation_handler = EventHandler(websocket.disconnect, one_shot=True)
+
+    return receive_audio, config, cancellation_handler
 
 
 def create_local_mic():
