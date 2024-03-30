@@ -36,16 +36,15 @@ async def start_transcription(mic_config: MicrophoneConfig, mic_event: Event):
     """
 
     # initialize transcription
-    transcript_event = Event[str]()
-    transcript_handler = await _create_handler(mic_config)
+    transcript_event, audio_handler = await _create_handler(mic_config)
     # start recording and transcribing
     record_event, record_canceller = await recorder.start_recorder(
         mic_config, mic_event
     )
-    await record_event.subscribe(transcript_handler)
+    await record_event.subscribe(audio_handler)
 
     async def stop():  # stop recording and transcribing
-        await record_event.unsubscribe(transcript_handler)
+        await record_event.unsubscribe(audio_handler)
         await record_canceller()
 
     cancellation_event = Event()
@@ -98,7 +97,7 @@ async def _create_handler(mic_config: MicrophoneConfig):
             LOGGER.exception(f"Error recognizing audio: {e}")
             return
 
-    return EventHandler(handler)
+    return transcript_event, EventHandler(handler)
 
 
 def create_console_display():

@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketException, status
 
-from ..services import transcription
+from ..services import transcription as transcription_service
 from ..services.audio import microphones, player, speakers
 from ..services.events import Event, EventHandler
 from ..services.websocket import WebSocketConnection
@@ -36,9 +36,9 @@ async def start_transcription(websocket: WebSocket):
     socket = WebSocketConnection(websocket)
 
     # start microphone
-    mic, config, mic_token = await microphones.create_websocket_mic(socket)
-    LOGGER.debug("Websocket microphone created. Config: %s", config)
-    # mic, config, mic_token = microphones.create_local_mic()
+    # mic, config, mic_token = await microphones.create_websocket_mic(socket)
+    mic, config, mic_token = microphones.create_local_mic()
+    LOGGER.info("Websocket microphone created. Config: %s", config)
 
     # connect mic and speaker through audio player
     audio_event, audio_token = await player.start_audio_player(mic)
@@ -47,12 +47,12 @@ async def start_transcription(websocket: WebSocket):
     LOGGER.debug("Speaker started")
 
     # start transcription
-    # engine = transcription.engines.WhisperEngine()
-    # (
-    #     _transcription,
-    #     transcription_token,
-    # ) = await transcription.start_transcription(engine, config, audio_event)
-    # await _transcription.subscribe(transcription.create_console_display())
+    # _transcription, transcription_token = (
+    #     await transcription_service.start_transcription(config, audio_event)
+    # )
+    # await _transcription.subscribe(
+    #     transcription_service.create_console_display()
+    # )  # TODO: remove when debugging is done
     # LOGGER.debug("Transcription started")
 
     async def shutdown():
