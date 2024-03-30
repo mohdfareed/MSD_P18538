@@ -1,5 +1,6 @@
 @page "/transcription"
 @inject Services.TranscriptionService TranscriptionService
+@inject Services.AudioService AudioService
 @using MudBlazor
 
 <PageTitle>Transcription</PageTitle>
@@ -29,6 +30,9 @@
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Error"
                 OnClick="@(async () => await StartRecording())">Not recording</MudButton>
         }
+
+        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Warning"
+            OnClick="@(async () => await Record())">Recording</MudButton>
     </MudCardActions>
 </MudCard>
 
@@ -79,5 +83,10 @@
         // update last line with new text
         transcriptions[^1] = text;
         StateHasChanged();
+    }
+
+    public async Task Record()
+    {
+        await AudioService.StartAudioStreamingAsync();
     }
 }
