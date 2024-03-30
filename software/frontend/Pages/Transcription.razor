@@ -9,7 +9,7 @@
         <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>
     </MudCardContent>
     <MudCardActions>
-        @if (TranscriptionService.IsTranscribing)
+        @if (isTranscribing)
         {
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
                 OnClick="@(transcriptionCTS.Cancel)">Transcribing...</MudButton>
@@ -27,15 +27,21 @@
 @code {
     private List<string> transcriptions = new List<string> { "" };
     private CancellationTokenSource transcriptionCTS = new();
+    private bool isTranscribing = false;
 
     private async Task StartTranscription()
     {
         transcriptionCTS.Cancel();
+        isTranscribing = true;
+
         transcriptionCTS = new CancellationTokenSource();
+        transcriptionCTS.Token.Register(() => {
+            isTranscribing = false; StateHasChanged();
+        });
 
         await TranscriptionService.ReceiveTextStreamAsync(
-        OnTranscriptionReceived, transcriptionCTS.Token);
-        transcriptionCTS.Cancel();
+        OnTranscriptionReceived, transcriptionCTS.Cancel,
+        transcriptionCTS.Token);
         StateHasChanged();
     }
 

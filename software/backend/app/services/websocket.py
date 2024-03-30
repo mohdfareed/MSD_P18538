@@ -78,7 +78,7 @@ class WebSocketConnection:
             return await receiver
         except WebSocketDisconnect:
             await self.disconnection_event()
-            raise asyncio.CancelledError("WebSocket disconnected")
+            LOGGER.warning("WebSocket disconnected")
 
     async def disconnect(self):
         """Disconnect the WebSocket."""

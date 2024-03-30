@@ -68,6 +68,8 @@ async def create_websocket_mic(websocket: WebSocketConnection):
         EventHandler: The cancellation handler.
     """
 
+    # FIXME: deprecated, implementation is directly in audio controller
+
     await websocket.connect()
     config = await websocket.receive_obj(MicrophoneConfig)
     config.sample_width //= 8  # convert bits to bytes

@@ -1,9 +1,20 @@
 const CHUNK_SIZE = 500; // milliseconds
+const CONFIG = {
+    audio: {
+        sampleRate: 48000,
+        sampleSize: 16,
+        channelCount: 1
+    }
+};
 let mediaRecorder = null;
 
 async function record(dotNetReference, callback) {
-    await navigator.mediaDevices.getUserMedia({ audio: true })
+    await navigator.mediaDevices.getUserMedia(CONFIG)
         .then(stream => {
+            // log active configuration
+            console.log(stream.getAudioTracks()[0].getSettings());
+
+            // start recording
             mediaRecorder = new MediaRecorder(stream);
             mediaRecorder.start(CHUNK_SIZE);
             mediaRecorder.ondataavailable = async (e) => {

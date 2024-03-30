@@ -8,9 +8,8 @@ public class TranscriptionService
 
     // dependencies
     private readonly ILogger<TranscriptionService> _logger;
-    private readonly string _websocket_route; // websocket route
-
-    public bool IsTranscribing { get; private set; } = false;
+    private readonly string _websocket_route;
+    private Action? _cancelCallback = null;
 
 
     public TranscriptionService(Models.GlobalSettings globalSettings,
@@ -21,9 +20,9 @@ public class TranscriptionService
     }
 
     public async Task ReceiveTextStreamAsync(Action<string> handler,
-    CancellationToken cancellationToken = default)
+    Action cancelCallback, CancellationToken cancellationToken = default)
     {
-        IsTranscribing = true;
+        _cancelCallback = cancelCallback;
         WebSocketConnection socket = new();
         string? message;
 
@@ -37,17 +36,14 @@ public class TranscriptionService
                 handler(message);
             }
         }
-        catch (OperationCanceledException)
-        {
-            _logger.LogDebug("Transcription stream cancelled");
-        }
         catch (WebSocketException)
         {
             _logger.LogInformation("Transcription stream closed");
         }
         finally
         {
-            IsTranscribing = false;
+            _cancelCallback?.Invoke();
+            _cancelCallback = null;
             await socket.CloseAsync(CancellationToken.None);
         }
     }

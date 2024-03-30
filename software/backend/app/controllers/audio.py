@@ -4,44 +4,33 @@ import logging
 import os
 import subprocess
 
-import pyaudio
-from fastapi import (
-    APIRouter,
-    WebSocket,
-    WebSocketDisconnect,
-    WebSocketException,
-    status,
-)
+from fastapi import APIRouter, WebSocket, WebSocketException, status
+
+from ..models import microphone
+from ..services import transcription
+from ..services.audio import speakers
+from ..services.events import Event
+from ..services.websocket import WebSocketConnection
 
 LOGGER = logging.getLogger(__name__)
 
 router = APIRouter()
-audio_system = pyaudio.PyAudio()
-output_stream = None
 
 
 @router.websocket("/audio")
 async def stream_audio(websocket: WebSocket):
-    global output_stream
-
-    await websocket.accept()
+    socket = WebSocketConnection(websocket)
+    await socket.connect()
     LOGGER.info("Audio source connected")
-    output_stream = audio_system.open(
-        format=pyaudio.paInt16, channels=1, rate=48000, output=True
-    )
+
+    # start speaker and transcription
+    mic_config = microphone.MicrophoneConfig(48000, 2, 1)
+    audio_event = Event[bytes]()
+    speaker_token = await speakers.start_speaker(mic_config, audio_event)
+    # transcription_token = await transcription.start(mic_config, audio_event)
+
     process = subprocess.Popen(
-        [
-            "ffmpeg",
-            "-i",
-            "pipe:0",
-            "-f",
-            "s16le",
-            "-ar",
-            "48000",
-            "-ac",
-            "1",
-            "pipe:1",
-        ],
+        ["ffmpeg", "-i", "pipe:0", "-f", "s16le", "pipe:1"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
@@ -60,7 +49,9 @@ async def stream_audio(websocket: WebSocket):
 
     try:
         while True:
-            audio_chunk = await websocket.receive_bytes()
+            audio_chunk = await socket.receive_bytes()
+            if not audio_chunk:
+                break
             LOGGER.debug(f"Received audio data: {len(audio_chunk)} bytes")
 
             # Write the .webm audio chunk to ffmpeg's stdin
@@ -76,19 +67,16 @@ async def stream_audio(websocket: WebSocket):
                 except BlockingIOError:
                     pass
             LOGGER.debug(f"Decoded audio data: {len(pcm_chunk)} bytes")
-            output_stream.write(pcm_chunk)
+            await audio_event.trigger(pcm_chunk)
 
-    except WebSocketException:
-        raise
-    except WebSocketDisconnect:
-        pass
     except Exception as e:
         LOGGER.exception(f"Error streaming audio: {e}")
     finally:
         LOGGER.warning("Audio source disconnected")
-        output_stream.close()
-        process.terminate()  # Make sure to terminate the ffmpeg process
-        await asyncio.sleep(0.1)  # Give a moment for resources to clean up
+        await speaker_token.trigger()
+        # await transcription_token.trigger()
+        process.terminate()  # terminate the ffmpeg process
+        await asyncio.sleep(0.5)  # time for resources to clean up
         process.kill()
         process.stdin.close()
         process.stdout.close()

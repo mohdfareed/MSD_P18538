@@ -10,7 +10,7 @@
         <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>
     </MudCardContent>
     <MudCardActions>
-        @if (TranscriptionService.IsTranscribing)
+        @if (isTranscribing)
         {
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
                 OnClick="@(transcriptionCTS.Cancel)">Transcribing...</MudButton>
@@ -21,7 +21,7 @@
                 OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
         }
 
-        @if (AudioService.IsRecording)
+        @if (isRecording)
         {
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Warning"
                 OnClick="@(recordingCTS.Cancel)">Recording...</MudButton>
@@ -40,28 +40,37 @@
     private List<string> transcriptions = new List<string> { "" };
     private CancellationTokenSource transcriptionCTS = new();
     private CancellationTokenSource recordingCTS = new();
-
+    private bool isTranscribing = false;
     private bool isRecording = false;
 
     private async Task StartTranscription()
     {
         transcriptionCTS.Cancel();
+        isTranscribing = true;
+
         transcriptionCTS = new CancellationTokenSource();
+        transcriptionCTS.Token.Register(() => {
+            isTranscribing = false; StateHasChanged();
+        });
 
         await TranscriptionService.ReceiveTextStreamAsync(
-        OnTranscriptionReceived, transcriptionCTS.Token);
-        transcriptionCTS.Cancel();
+        OnTranscriptionReceived, transcriptionCTS.Cancel,
+        transcriptionCTS.Token);
         StateHasChanged();
     }
 
     public async Task StartRecording()
     {
         recordingCTS.Cancel();
-        recordingCTS = new CancellationTokenSource();
-        recordingCTS.Token.Register(() => isRecording = false);
         isRecording = true;
 
-        await AudioService.StartAudioStreamingAsync(recordingCTS.Token);
+        recordingCTS = new CancellationTokenSource();
+        recordingCTS.Token.Register(() => {
+            isRecording = false; StateHasChanged();
+        });
+
+        await AudioService.StartAudioStreamingAsync(recordingCTS.Cancel,
+        recordingCTS.Token);
         StateHasChanged();
     }
 

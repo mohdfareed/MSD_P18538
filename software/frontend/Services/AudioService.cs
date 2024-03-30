@@ -16,7 +16,7 @@ public class AudioService
     // state
     private WebSocketConnection? _socket = null;
     private CancellationToken? _cancellationToken = null;
-    public bool IsRecording { get; private set; } = false;
+    private Action? _cancelCallback = null;
 
 
     public AudioService(Models.GlobalSettings globalSettings,
@@ -28,22 +28,15 @@ public class AudioService
         _logger = logger;
     }
 
-    public async Task StartAudioStreamingAsync(
+    public async Task StartAudioStreamingAsync(Action cancelCallback,
     CancellationToken cancellationToken = default)
     {
-        IsRecording = true;
+        _cancelCallback = cancelCallback;
         _cancellationToken = cancellationToken;
         _socket = new WebSocketConnection();
 
-        try
-        {
-            await _socket.ConnectAsync(_websocket_route, cancellationToken);
-            await _jsRuntime.InvokeVoidAsync("record", _objRef, "Callback");
-        }
-        catch (WebSocketException ex)
-        {
-            _logger.LogError(ex, "Failed to start audio streaming");
-        }
+        await _socket.ConnectAsync(_websocket_route, cancellationToken);
+        await _jsRuntime.InvokeVoidAsync("record", _objRef, "Callback");
     }
 
     [JSInvokable]
@@ -60,8 +53,9 @@ public class AudioService
         catch
         {
             _logger.LogInformation("Mic connection closed");
-            IsRecording = false;
             _cancellationToken = null;
+            _cancelCallback?.Invoke();
+            _cancelCallback = null;
 
             await _jsRuntime.InvokeVoidAsync("stopRecording");
             if (_socket != null)
