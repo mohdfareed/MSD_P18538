@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Microsoft.JSInterop;
 
 namespace Services;
 
@@ -8,11 +7,8 @@ public class ConfigurationService
     const string _route = "/config/"; // API route
 
     // dependencies
-    private readonly DotNetObjectReference<ConfigurationService> _objRef;
     private readonly HttpClient _httpClient; // used to call API
     private readonly ILogger<ConfigurationService> _logger;
-
-    // routes
     private readonly string _http_route; // API http route
 
 
@@ -21,8 +17,6 @@ public class ConfigurationService
     {
         _httpClient = httpClient;
         _http_route = globalSettings.BackendHTTPUrl + _route;
-
-        _objRef = DotNetObjectReference.Create(this);
         _logger = logger;
     }
 

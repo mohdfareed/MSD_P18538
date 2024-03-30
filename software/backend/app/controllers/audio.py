@@ -5,7 +5,13 @@ import os
 import subprocess
 
 import pyaudio
-from fastapi import APIRouter, WebSocket, WebSocketException, status
+from fastapi import (
+    APIRouter,
+    WebSocket,
+    WebSocketDisconnect,
+    WebSocketException,
+    status,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -74,6 +80,8 @@ async def stream_audio(websocket: WebSocket):
 
     except WebSocketException:
         raise
+    except WebSocketDisconnect:
+        pass
     except Exception as e:
         LOGGER.exception(f"Error streaming audio: {e}")
     finally:

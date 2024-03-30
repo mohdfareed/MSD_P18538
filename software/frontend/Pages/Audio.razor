@@ -1,8 +1,9 @@
-@page "/transcription"
+@page "/audio"
 @inject Services.TranscriptionService TranscriptionService
+@inject Services.AudioService AudioService
 @using MudBlazor
 
-<PageTitle>Transcription</PageTitle>
+<PageTitle>Audio</PageTitle>
 <MudText Typo="Typo.h3" Class="mb-3">Live Transcription</MudText>
 <MudCard>
     <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
@@ -19,6 +20,17 @@
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Error"
                 OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
         }
+
+        @if (AudioService.IsRecording)
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Warning"
+                OnClick="@(recordingCTS.Cancel)">Recording...</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Error"
+                OnClick="@(async () => await StartRecording())">Not recording</MudButton>
+        }
     </MudCardActions>
 </MudCard>
 
@@ -27,6 +39,9 @@
 @code {
     private List<string> transcriptions = new List<string> { "" };
     private CancellationTokenSource transcriptionCTS = new();
+    private CancellationTokenSource recordingCTS = new();
+
+    private bool isRecording = false;
 
     private async Task StartTranscription()
     {
@@ -36,6 +51,17 @@
         await TranscriptionService.ReceiveTextStreamAsync(
         OnTranscriptionReceived, transcriptionCTS.Token);
         transcriptionCTS.Cancel();
+        StateHasChanged();
+    }
+
+    public async Task StartRecording()
+    {
+        recordingCTS.Cancel();
+        recordingCTS = new CancellationTokenSource();
+        recordingCTS.Token.Register(() => isRecording = false);
+        isRecording = true;
+
+        await AudioService.StartAudioStreamingAsync(recordingCTS.Token);
         StateHasChanged();
     }
 
