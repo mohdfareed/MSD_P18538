@@ -6,13 +6,23 @@ const CONFIG = {
         channelCount: 1
     }
 };
-let mediaRecorder = null;
 
-async function record(dotNetReference, callback) {
-    await navigator.mediaDevices.getUserMedia(CONFIG)
+let mediaRecorder = null;
+let mediaStream = null;
+
+async function record(dotNetReference, callback, configCallback) {
+    mediaStream = await navigator.mediaDevices.getUserMedia(CONFIG)
         .then(stream => {
             // log active configuration
-            console.log(stream.getAudioTracks()[0].getSettings());
+            const settings = stream.getAudioTracks()[0].getSettings();
+            console.log(settings);
+
+            // send configuration to backend
+            dotNetReference.invokeMethodAsync(configCallback,
+                settings.sampleRate ?? CONFIG.audio.sampleRate,
+                settings.sampleSize ?? CONFIG.audio.sampleSize,
+                settings.channelCount ?? CONFIG.audio.channelCount,
+            );
 
             // start recording
             mediaRecorder = new MediaRecorder(stream);
@@ -21,10 +31,16 @@ async function record(dotNetReference, callback) {
                 const audioData = new Uint8Array(await e.data.arrayBuffer());
                 dotNetReference.invokeMethodAsync(callback, audioData);
             };
+            console.log("Recording started");
         });
 }
 
 function stopRecording() {
     mediaRecorder?.stop();
     mediaRecorder = null;
+
+    mediaStream?.getTracks().forEach(track => track.stop());
+    mediaStream = null;
+
+    console.log("Recording stopped");
 }

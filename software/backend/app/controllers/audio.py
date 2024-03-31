@@ -6,7 +6,7 @@ import subprocess
 
 from fastapi import APIRouter, WebSocket, WebSocketException, status
 
-from ..models import microphone
+from ..models.microphone import MicrophoneConfig
 from ..services import transcription
 from ..services.audio import speakers
 from ..services.events import Event
@@ -23,17 +23,32 @@ async def stream_audio(websocket: WebSocket):
     await socket.connect()
     LOGGER.info("Audio source connected")
 
+    # receive audio config
+    mic_config = await socket.receive_obj(MicrophoneConfig)
+    mic_config.sample_width //= 8  # convert bits to bytes
+    LOGGER.debug(f"Audio config: {mic_config}")
+
     # start speaker and transcription
-    mic_config = microphone.MicrophoneConfig(48000, 2, 1)
     audio_event = Event[bytes]()
     speaker_token = await speakers.start_speaker(mic_config, audio_event)
     # transcription_token = await transcription.start(mic_config, audio_event)
 
     process = subprocess.Popen(
-        ["ffmpeg", "-i", "pipe:0", "-f", "s16le", "pipe:1"],
+        [
+            "ffmpeg",
+            "-i",
+            "pipe:0",
+            "-f",
+            "s16le",
+            "-ar",
+            str(mic_config.sample_rate),
+            "-ac",
+            str(mic_config.num_channels),
+            "pipe:1",
+        ],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
+        # stderr=subprocess.DEVNULL,
         bufsize=10**8,
     )
 

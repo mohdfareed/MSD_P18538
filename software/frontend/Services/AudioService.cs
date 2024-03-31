@@ -1,4 +1,3 @@
-using System.Net.WebSockets;
 using Microsoft.JSInterop;
 
 namespace Services;
@@ -36,7 +35,8 @@ public class AudioService
         _socket = new WebSocketConnection();
 
         await _socket.ConnectAsync(_websocket_route, cancellationToken);
-        await _jsRuntime.InvokeVoidAsync("record", _objRef, "Callback");
+        await _jsRuntime.InvokeVoidAsync("record", _objRef,
+        "Callback", "ConfigCallback");
     }
 
     [JSInvokable]
@@ -44,11 +44,48 @@ public class AudioService
     {
         try
         {
+            if (_socket == null) return;
             if (_cancellationToken?.IsCancellationRequested ?? true)
             {
                 throw new OperationCanceledException();
             }
             await _socket!.SendAsync(audioData);
+        }
+        catch
+        {
+            _logger.LogInformation("Mic connection closed");
+            _cancellationToken = null;
+            _cancelCallback?.Invoke();
+            _cancelCallback = null;
+
+            await _jsRuntime.InvokeVoidAsync("stopRecording");
+            if (_socket != null)
+            {
+                await _socket.CloseAsync();
+                _socket = null;
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task ConfigCallback(int sampleRate, int sampleWidth,
+    int channelCount)
+    {
+        try
+        {
+            if (_socket == null) return;
+            if (_cancellationToken?.IsCancellationRequested ?? true)
+            {
+                throw new OperationCanceledException();
+            }
+
+            Models.MicConfig config = new()
+            {
+                SampleRate = sampleRate,
+                SampleWidth = sampleWidth,
+                ChannelCount = channelCount
+            };
+            await _socket!.SendAsync(config);
         }
         catch
         {
