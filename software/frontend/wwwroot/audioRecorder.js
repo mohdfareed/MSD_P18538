@@ -11,8 +11,10 @@ let mediaRecorder = null;
 let mediaStream = null;
 
 async function record(dotNetReference, callback, configCallback) {
-    mediaStream = await navigator.mediaDevices.getUserMedia(CONFIG)
+    await navigator.mediaDevices.getUserMedia(CONFIG)
         .then(stream => {
+            mediaStream = stream;
+
             // log active configuration
             const settings = stream.getAudioTracks()[0].getSettings();
             console.log(settings);
@@ -31,6 +33,7 @@ async function record(dotNetReference, callback, configCallback) {
                 const audioData = new Uint8Array(await e.data.arrayBuffer());
                 dotNetReference.invokeMethodAsync(callback, audioData);
             };
+
             console.log("Recording started");
         });
 }
