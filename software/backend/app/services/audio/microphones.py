@@ -5,9 +5,12 @@ Provides interfaces for various microphone sources.
 """
 
 import asyncio
-import io
+import fcntl
+import os
+import subprocess
 import wave
 
+from fastapi import WebSocketException, status
 from pydub import AudioSegment
 
 from ...models.microphone import MicrophoneConfig
@@ -68,70 +71,79 @@ async def create_websocket_mic(websocket: WebSocketConnection):
         EventHandler: The cancellation handler.
     """
 
-    # FIXME: deprecated, implementation is directly in audio controller
-
     await websocket.connect()
+
+    # receive audio config
     config = await websocket.receive_obj(MicrophoneConfig)
     config.sample_width //= 8  # convert bits to bytes
+    assert config.sample_width == 2  # only supported sample width
+    assert config.num_channels == 1  # only supported number of channels
     LOGGER.debug(f"Received microphone config: {config}")
 
+    process = subprocess.Popen(  # audio stream decoding process
+        [
+            "ffmpeg",
+            "-i",
+            "pipe:0",
+            "-f",
+            "wav",
+            "-ar",
+            str(config.sample_rate),
+            "-ac",
+            str(config.num_channels),
+            "pipe:1",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        bufsize=10**8,
+    )
+
+    # ensure process pipes are open
+    if not process.stdout or not process.stdin:
+        raise WebSocketException(
+            reason="Error starting ffmpeg audio decoding process",
+            code=status.WS_1011_INTERNAL_ERROR,
+        )
+
+    # start process with stdout as non-blocking
+    flags = fcntl.fcntl(process.stdout, fcntl.F_GETFL)
+    fcntl.fcntl(process.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+    LOGGER.debug(f"Starting audio decoding process: {process.pid}")
+
     async def receive_audio():
-        nonlocal websocket
+        nonlocal websocket, process
         audio_bytes = await websocket.receive_bytes()
+        if not audio_bytes:
+            return b""
 
-        audio_stream = io.BytesIO(audio_bytes)
-        audio_segment = AudioSegment.from_file(
-            audio_stream,
-            format="webm",
-            codec="opus",
-        )  # FIXME: fails on second chunk due to missing header
+        # ensure process pipes are still open
+        if not process.stdout or not process.stdin:
+            raise WebSocketException(
+                reason="Error starting ffmpeg audio decoding process",
+                code=status.WS_1011_INTERNAL_ERROR,
+            )
 
-        wav_stream = io.BytesIO()
-        audio_segment.export(wav_stream, format="wav")
-        return wav_stream.getvalue()
+        # decode audio data from webm to wav
+        process.stdin.write(audio_bytes)
+        process.stdin.flush()
 
-    cancellation_handler = EventHandler(websocket.disconnect, one_shot=True)
+        # read decoded audio data
+        audio_bytes = b""
+        while True:
+            try:  # read all available data from the pipe
+                return os.read(process.stdout.fileno(), 10**8)
+            except BlockingIOError:
+                pass
 
+    async def shutdown():
+        nonlocal websocket, process
+        process.terminate()  # terminate the ffmpeg process
+        await asyncio.sleep(0.5)  # time for resources to clean up
+        process.kill()
+        process.stdin.close() if process.stdin else None
+        process.stdout.close() if process.stdout else None
+        LOGGER.debug("Audio decoding process terminated")
+
+    cancellation_handler = EventHandler(shutdown, one_shot=True)
     return receive_audio, config, cancellation_handler
-
-
-def create_local_mic():
-    """Creates a microphone audio player that returns audio chunks from a
-    physical microphone.
-
-    Returns:
-        Callable[[], Coroutine[bytes]]: The audio source.
-        MicrophoneConfig: The audio configuration.
-        EventHandler: The cancellation handler.
-    """
-
-    mic_config = MicrophoneConfig(
-        sample_rate=48000,
-        chunk_size=1024,
-        sample_width=2,
-        num_channels=1,
-    )
-
-    mic = LOCAL_AUDIO_SOURCE.open(
-        format=LOCAL_AUDIO_SOURCE.get_format_from_width(
-            mic_config.sample_width
-        ),
-        channels=mic_config.num_channels,
-        rate=mic_config.sample_rate,
-        input=True,
-        frames_per_buffer=mic_config.chunk_size,
-    )
-
-    def receive_audio():
-        nonlocal mic
-        return mic.read(mic_config.chunk_size, exception_on_overflow=False)
-
-    async def close_mic():
-        nonlocal mic
-        mic.stop_stream()
-        mic.close()
-        LOGGER.debug("Microphone stopped")
-
-    cancellation_handler = EventHandler(close_mic, one_shot=True)
-
-    return receive_audio, mic_config, cancellation_handler

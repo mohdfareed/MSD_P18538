@@ -66,7 +66,7 @@ async def _create_handler(mic_config: MicrophoneConfig):
 
         # check for a new phrase (pause in speech)
         async with time_lock:
-            now = datetime.utcnow()
+            now = datetime.now()
             if now - phrase_time > timedelta(seconds=_PHRASE_TIMEOUT):
                 # indicate a pause between phrases
                 await transcript_event.trigger(PHRASE_TERMINATOR)
