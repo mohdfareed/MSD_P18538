@@ -27,9 +27,10 @@ sudo cp ~/MSD_P18538/software/backend/app/services/network/dhcpd.conf /etc/dhcp/
 sudo apt install build-essential gdb lcov pkg-config portaudio19-dev \
       libbz2-dev libffi-dev libgdbm-dev libgdbm-compat-dev liblzma-dev \
       libncurses5-dev libreadline6-dev libsqlite3-dev libssl-dev \
-      lzma lzma-dev tk-dev uuid-dev zlib1g-dev -y
+      lzma lzma-dev tk-dev uuid-dev zlib1g-dev ffmpeg -y
 # REVIEW: unfortunately, pre-built python versions are only available on ubuntu
 # Added packages: portaudio19-dev (for pyaudio)
+#                 ffmpeg (for audio decoding)
 
 # Setup python environment
 cd $app_dir/software                    # Change to dir of this script
