@@ -27,15 +27,6 @@ async def stream_audio(websocket: WebSocket):
     transcription_token = await transcription.start(config, audio_event)
     LOGGER.info("Transcription started")
 
-    # FIXME: log to console for debugging
-    if not (transcription_event := transcription.event()):
-        LOGGER.warning("Waiting for transcription to start")
-        await asyncio.sleep(0.5)
-    else:
-        await transcription_event.subscribe(
-            transcription.core.create_console_display()
-        )
-
     async def shutdown():
         await speaker_token()
         await audio_token()

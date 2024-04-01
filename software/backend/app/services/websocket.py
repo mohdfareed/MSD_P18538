@@ -9,7 +9,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
 
 import asyncio
 import logging
-from typing import Any, Coroutine, Type, TypeVar
+from typing import Any, Type, TypeVar
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
@@ -58,6 +58,9 @@ class WebSocketConnection:
         except WebSocketDisconnect:  # treat as a cancelled operation
             await self.disconnection_event()
             raise asyncio.CancelledError("WebSocket disconnected")
+        except RuntimeError as e:  # if sending while client disconnected
+            await self.disconnection_event()
+            raise asyncio.CancelledError("WebSocket disconnected") from e
 
     async def receive_bytes(self) -> bytes:
         """Receive bytes from the WebSocket."""
