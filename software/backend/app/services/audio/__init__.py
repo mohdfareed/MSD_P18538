@@ -16,6 +16,3 @@ import pyaudio
 
 LOGGER = logging.getLogger(__name__)
 """Audio service logger."""
-
-LOCAL_AUDIO_SOURCE = pyaudio.PyAudio()
-"""The local audio source."""

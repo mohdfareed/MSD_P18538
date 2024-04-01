@@ -11,12 +11,11 @@ import subprocess
 import wave
 
 from fastapi import WebSocketException, status
-from pydub import AudioSegment
 
 from ...models.microphone import MicrophoneConfig
 from ..events import EventHandler
 from ..websocket import WebSocketConnection
-from . import LOCAL_AUDIO_SOURCE, LOGGER
+from . import LOGGER
 
 
 def create_file_mic(filename: str, chunk_size: int = 1024):
@@ -32,6 +31,7 @@ def create_file_mic(filename: str, chunk_size: int = 1024):
         CancelHandler: The cancellation handler.
     """
 
+    filename = os.path.abspath(os.path.expanduser(filename))
     with wave.open(filename, "rb") as file:
         config = MicrophoneConfig(
             sample_rate=file.getframerate(),
@@ -48,6 +48,7 @@ def create_file_mic(filename: str, chunk_size: int = 1024):
             asyncio.run_coroutine_threadsafe(
                 data_queue.put(chunk), asyncio.get_event_loop()
             )
+        LOGGER.debug(f"Loaded audio file: {filename}")
 
     async def player():
         nonlocal data_queue
@@ -125,8 +126,11 @@ async def create_websocket_mic(websocket: WebSocketConnection):
             )
 
         # decode audio data from webm to wav
-        process.stdin.write(audio_bytes)
-        process.stdin.flush()
+        try:
+            process.stdin.write(audio_bytes)
+            process.stdin.flush()
+        except BrokenPipeError:  # process pipe closed
+            return b""
 
         # read decoded audio data
         audio_bytes = b""

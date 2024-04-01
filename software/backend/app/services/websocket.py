@@ -73,12 +73,10 @@ class WebSocketConnection:
     async def _receive(self, receiver):
         try:
             if self._websocket.client_state != WebSocketState.CONNECTED:
-                LOGGER.error("Receiving data from disconnected WebSocket")
-                raise WebSocketDisconnect
+                return  # client disconnected
             return await receiver()
         except WebSocketDisconnect:
             await self.disconnection_event()
-            LOGGER.warning("WebSocket disconnected")
 
     async def disconnect(self):
         """Disconnect the WebSocket."""
