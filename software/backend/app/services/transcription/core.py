@@ -123,7 +123,9 @@ async def _create_handler(mic_config: MicrophoneConfig):
             LOGGER.exception(f"Error recognizing audio: {e}")
             return
 
-    return transcript_event, EventHandler(handler, timeout=None)
+    return transcript_event, EventHandler(
+        handler, timeout=None, sequential=True
+    )
 
 
 def create_console_display():

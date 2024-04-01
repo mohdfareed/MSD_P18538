@@ -123,9 +123,7 @@ class EventHandler(Generic[P]):
                         await func(*args, **kwargs), duration
                     )
                 except asyncio.TimeoutError:
-                    LOGGER.exception(
-                        f"{func} timed out after {duration} seconds"
-                    )
+                    LOGGER.error(f"{self} timed out after {duration} seconds")
 
             return wrapper
 

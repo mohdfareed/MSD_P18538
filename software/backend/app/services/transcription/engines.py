@@ -28,7 +28,10 @@ async def recognize(audio_data: sr.AudioData) -> str:
     global recognizer, config, active_engine
 
     try:
-        return await asyncio.to_thread(active_engine, audio_data)
+        # return await asyncio.to_thread(active_engine, audio_data)
+        # return active_engine(audio_data)
+        await asyncio.sleep(1)
+        return "Hello World"
     except sr.UnknownValueError as e:
         raise UnrecognizedAudioError from e
     except sr.RequestError as e:

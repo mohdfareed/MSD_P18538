@@ -87,6 +87,12 @@ def _create_recording_loop():
 
     async def stop_loop():
         nonlocal recording_loop
+        tasks = [
+            t
+            for t in asyncio.all_tasks(recording_loop)
+            if t is not asyncio.current_task()
+        ]
+        [task.cancel() for task in tasks]
         recording_loop.stop()
 
     # create a loop for recording and run it in a dedicated thread
