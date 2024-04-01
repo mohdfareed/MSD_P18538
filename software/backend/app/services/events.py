@@ -41,7 +41,7 @@ class EventHandler(Generic[P]):
         blocking: bool = False,
         one_shot: bool = False,
         sequential: bool = False,
-        timeout: float = EVENT_TIMEOUT,
+        timeout: float | None = EVENT_TIMEOUT,
     ):
         assert asyncio.iscoroutinefunction(callback) or callable(
             callback
@@ -113,7 +113,7 @@ class EventHandler(Generic[P]):
         else:
             raise TypeError(f"Invalid callback type: {type(self.callback)}")
 
-    def _timeout_wrapper(self, duration: float):
+    def _timeout_wrapper(self, duration: float | None):
         # add timeout to callback
         def decorator(func: Callable[..., Coroutine]):
             @functools.wraps(func)

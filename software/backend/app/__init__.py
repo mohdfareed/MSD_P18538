@@ -24,6 +24,7 @@ logging_file = os.path.join(data_dir, "logs", "backend.log")
 debug = os.getenv("DEBUG", "False").lower() == "true"
 reduced_logging_modules = [
     "uvicorn.error",
+    "asyncio",
 ]  # modules with reduced logging level
 
 # logging formats

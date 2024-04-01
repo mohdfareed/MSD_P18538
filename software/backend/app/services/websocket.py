@@ -61,31 +61,27 @@ class WebSocketConnection:
 
     async def receive_bytes(self) -> bytes:
         """Receive bytes from the WebSocket."""
-        return await self._receive(self._websocket.receive_bytes())
-
-    async def receive_text(self) -> str:
-        """Receive text from the WebSocket."""
-        return await self._receive(self._websocket.receive_text())
+        return await self._receive(self._websocket.receive_bytes) or b""
 
     async def receive_obj(self, cls: Type[T]) -> T:
         """Receive an object from the WebSocket."""
-        return cls(**await self._receive(self._websocket.receive_json()))
+        return cls(**await self._receive(self._websocket.receive_json))
 
-    async def _receive(self, receiver: Coroutine):
+    async def _receive(self, receiver):
         try:
             if self._websocket.client_state != WebSocketState.CONNECTED:
-                raise RuntimeError("WebSocket client is not connected")
-            return await receiver
+                LOGGER.error("Receiving data from disconnected WebSocket")
+                raise WebSocketDisconnect
+            return await receiver()
         except WebSocketDisconnect:
             await self.disconnection_event()
             LOGGER.warning("WebSocket disconnected")
 
     async def disconnect(self):
         """Disconnect the WebSocket."""
-        if self._websocket.state != WebSocketState.CONNECTED:
-            return  # already disconnected
-
         try:
+            if self._websocket.state != WebSocketState.CONNECTED:
+                return  # already disconnected
             await self._websocket.close()
         except Exception as e:
             LOGGER.exception(e)

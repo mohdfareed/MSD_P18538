@@ -1,6 +1,6 @@
 import asyncio
 import io
-import wave
+import threading
 
 import speech_recognition as sr
 
@@ -35,17 +35,7 @@ async def start_recorder(mic_config: MicrophoneConfig, mic_event: Event):
     recognizer.energy_threshold = ENERGY_THRESHOLD
     recognizer.dynamic_energy_threshold = DYNAMIC_ENERGY_THRESHOLD
 
-    # buffer = io.BytesIO()
-    # with wave.open(buffer, "wb") as f:
-    #     f.setnchannels(mic_config.num_channels)
-    #     f.setsampwidth(mic_config.sample_width)
-    #     f.setframerate(mic_config.sample_rate)
-    #     f.writeframes(b"\x00" * 0)  # write empty header (placeholder)
-    # source = sr.AudioSource()
-
-    # def write_to_buffer(data):
-    #     nonlocal buffer
-
+    # listen to the microphone
     source = BufferedAudioSource(mic_config)
     await mic_event.subscribe(source.audio_handler)
     await mic_event.until_triggered()  # wait for first audio packet
@@ -57,16 +47,18 @@ async def start_recorder(mic_config: MicrophoneConfig, mic_event: Event):
 
     # start recording in the background
     recording_event = Event[sr.AudioData]()
-    stopper = recognizer.listen_in_background(
+    recording_loop, loop_stopper = _create_recording_loop()
+    recording_stopper = recognizer.listen_in_background(
         source,
-        recording_event.trigger,
+        _create_trigger_wrapper(recording_event, recording_loop),
         phrase_time_limit=RECORD_TIMEOUT,
     )
 
     # stop recording when cancelled
     async def stop():
-        nonlocal stopper
-        stopper()
+        nonlocal recording_stopper, loop_stopper
+        recording_stopper()
+        await loop_stopper()
         await mic_event.unsubscribe(source.audio_handler)
 
     cancellation_event = Event()
@@ -75,9 +67,36 @@ async def start_recorder(mic_config: MicrophoneConfig, mic_event: Event):
     return recording_event, cancellation_event
 
 
+def _create_trigger_wrapper(event, recording_loop):
+    def trigger_wrapper(_, audio_data: sr.AudioData):
+        async def async_wrapper():
+            await event.trigger(audio_data)
+
+        asyncio.run_coroutine_threadsafe(async_wrapper(), recording_loop)
+
+    return trigger_wrapper
+
+
+def _create_recording_loop():
+    recording_loop = asyncio.new_event_loop()
+
+    def start_loop():
+        nonlocal recording_loop
+        asyncio.set_event_loop(recording_loop)
+        recording_loop.run_forever()
+
+    async def stop_loop():
+        nonlocal recording_loop
+        recording_loop.stop()
+
+    # create a loop for recording and run it in a dedicated thread
+    threading.Thread(target=start_loop).start()
+    return recording_loop, stop_loop
+
+
 class BufferedAudioSource(sr.AudioSource):
     def __init__(self, mic_config: MicrophoneConfig):
-        self.stream = io.BytesIO()
+        self.stream = self.AudioStream()
         self.audio_handler = EventHandler(self.stream.write)
 
         self.SAMPLE_RATE = mic_config.sample_rate
@@ -89,3 +108,30 @@ class BufferedAudioSource(sr.AudioSource):
 
     def __exit__(self, exc_type, exc_value, traceback):
         pass
+
+    class AudioStream(object):
+        def __init__(self) -> None:
+            self.buffer = io.BytesIO()
+            self.read_position = 0
+
+        def read(self, size: int = -1) -> bytes:
+            self.buffer.seek(self.read_position)
+            data = self.buffer.read(size)
+            self.read_position += len(data)
+            if size == -1 or len(data) < size:
+                self._reset_buffer()
+            return data
+
+        def close(self) -> None:
+            self.buffer.close()
+
+        def write(self, data: bytes) -> None:
+            self.buffer.write(data)
+            self.buffer.seek(0, io.SEEK_END)
+
+        def _reset_buffer(self):
+            # reset the buffer only if all data has been read
+            if self.buffer.tell() == self.read_position:
+                self.buffer.seek(0)
+                self.buffer.truncate()
+                self.read_position = 0

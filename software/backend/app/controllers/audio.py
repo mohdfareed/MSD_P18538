@@ -1,12 +1,8 @@
 import asyncio
-import fcntl
 import logging
-import os
-import subprocess
 
-from fastapi import APIRouter, WebSocket, WebSocketException, status
+from fastapi import APIRouter, WebSocket
 
-from ..models.microphone import MicrophoneConfig
 from ..services import transcription
 from ..services.audio import microphones, player, speakers
 from ..services.events import EventHandler
@@ -28,14 +24,23 @@ async def stream_audio(websocket: WebSocket):
     LOGGER.info("Audio player started")
     speaker_token = await speakers.start_speaker(config, audio_event)
     LOGGER.info("Speaker started")
-    # transcription_token = await transcription.start(config, audio_event)
-    # LOGGER.info("Transcription started")
+    transcription_token = await transcription.start(config, audio_event)
+    LOGGER.info("Transcription started")
+
+    # FIXME: log to console for debugging
+    if not (transcription_event := transcription.event()):
+        LOGGER.warning("Waiting for transcription to start")
+        await asyncio.sleep(0.5)
+    else:
+        await transcription_event.subscribe(
+            transcription.core.create_console_display()
+        )
 
     async def shutdown():
         await speaker_token()
         await audio_token()
         await mic_token()
-        # await transcription_token()
+        await transcription_token()
 
     shutdown_callback = EventHandler(shutdown, one_shot=True)
     await socket.disconnection_event.subscribe(shutdown_callback)

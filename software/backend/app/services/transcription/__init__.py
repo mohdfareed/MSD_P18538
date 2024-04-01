@@ -32,5 +32,4 @@ import logging
 LOGGER = logging.getLogger(__name__)
 """Audio module logger."""
 
-
-from .core import create_console_display, start_transcription
+from .core import event, start
