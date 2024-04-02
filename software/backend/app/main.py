@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import FRONTEND_URL, LOGGER
+from . import LOGGER
 from .controllers import audio, configurator, control, transcription
 
 app = FastAPI()
@@ -13,7 +13,7 @@ app.include_router(audio.router)
 # setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL or "*"],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
