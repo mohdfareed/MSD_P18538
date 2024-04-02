@@ -68,7 +68,10 @@ class WebSocketConnection:
 
     async def receive_obj(self, cls: Type[T]) -> T:
         """Receive an object from the WebSocket."""
-        return cls(**await self._receive(self._websocket.receive_json))
+        try:
+            return cls(**await self._receive(self._websocket.receive_json))
+        except TypeError as e:
+            raise TypeError(f"Failed to receive object: {T}") from e
 
     async def _receive(self, receiver):
         try:

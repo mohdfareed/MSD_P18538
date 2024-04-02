@@ -75,10 +75,16 @@ async def create_websocket_mic(websocket: WebSocketConnection):
     await websocket.connect()
 
     # receive audio config
-    config = await websocket.receive_obj(MicrophoneConfig)
-    config.sample_width //= 8  # convert bits to bytes
-    assert config.sample_width == 2  # only supported sample width
-    assert config.num_channels == 1  # only supported number of channels
+    try:
+        config = await websocket.receive_obj(MicrophoneConfig)
+        config.sample_width //= 8  # convert bits to bytes
+        assert config.sample_width == 2  # only supported sample width
+        assert config.num_channels == 1  # only supported number of channels
+    except (WebSocketException, AssertionError, TypeError) as e:
+        raise WebSocketException(
+            reason="Error receiving microphone config",
+            code=status.WS_1011_INTERNAL_ERROR,
+        ) from e
     LOGGER.debug(f"Received microphone config: {config}")
 
     process = subprocess.Popen(  # audio stream decoding process
