@@ -7,7 +7,7 @@ import uvicorn
 from dotenv import load_dotenv
 
 LOGGER = logging.getLogger(__name__)
-HOST = "localhost"
+HOST = "0.0.0.0"
 PORT = 9600
 
 

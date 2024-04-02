@@ -4,7 +4,7 @@ namespace Services;
 
 public class AudioService
 {
-    const string _route = "/audio"; // API route
+    const string _route = "audio"; // API route
 
     // dependencies
     private readonly IJSRuntime _jsRuntime;
@@ -18,13 +18,21 @@ public class AudioService
     private Action? _cancelCallback = null;
 
 
-    public AudioService(Models.GlobalSettings globalSettings,
-    IJSRuntime JSRuntime, ILogger<AudioService> logger)
+    public AudioService(HttpClient httpClient,
+    Models.GlobalSettings globalSettings, IJSRuntime JSRuntime,
+    ILogger<AudioService> logger)
     {
-        _websocket_route = globalSettings.BackendWSUrl + _route;
         _jsRuntime = JSRuntime;
         _objRef = DotNetObjectReference.Create(this);
         _logger = logger;
+
+        var builder = new UriBuilder(httpClient.BaseAddress!)
+        {
+            Scheme = httpClient.BaseAddress!.Scheme == "https" ? "wss" : "ws",
+            Port = int.Parse(globalSettings.BackendPort),
+            Path = _route,
+        };
+        _websocket_route = builder.Uri.ToString();
     }
 
     public async Task StartAudioStreamingAsync(Action cancelCallback,

@@ -20,8 +20,7 @@ app.add_middleware(
 )
 
 
-@app.get("/")
+@app.get("/health")
 async def root():
-    LOGGER.warning("Running")
-    LOGGER.error("Running")
+    LOGGER.info("Health check passed.")
     return {"message": "Running"}

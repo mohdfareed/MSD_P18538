@@ -4,7 +4,7 @@ namespace Services;
 
 public class TranscriptionService
 {
-    const string _route = "/transcription"; // API route
+    const string _route = "transcription"; // API route
 
     // dependencies
     private readonly ILogger<TranscriptionService> _logger;
@@ -12,11 +12,19 @@ public class TranscriptionService
     private Action? _cancelCallback = null;
 
 
-    public TranscriptionService(Models.GlobalSettings globalSettings,
+    public TranscriptionService(HttpClient httpClient,
+    Models.GlobalSettings globalSettings,
     ILogger<TranscriptionService> logger)
     {
-        _websocket_route = globalSettings.BackendWSUrl + _route;
         _logger = logger;
+
+        var builder = new UriBuilder(httpClient.BaseAddress!)
+        {
+            Scheme = httpClient.BaseAddress!.Scheme == "https" ? "wss" : "ws",
+            Port = int.Parse(globalSettings.BackendPort),
+            Path = _route
+        };
+        _websocket_route = builder.Uri.ToString();
     }
 
     public async Task ReceiveTextStreamAsync(Action<string> handler,

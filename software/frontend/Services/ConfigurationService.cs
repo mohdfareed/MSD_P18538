@@ -4,7 +4,7 @@ namespace Services;
 
 public class ConfigurationService
 {
-    const string _route = "/config/"; // API route
+    const string _route = "config"; // API route
 
     // dependencies
     private readonly HttpClient _httpClient; // used to call API
@@ -13,11 +13,17 @@ public class ConfigurationService
 
 
     public ConfigurationService(HttpClient httpClient,
-    Models.GlobalSettings globalSettings, ILogger<ConfigurationService> logger)
+    Models.GlobalSettings globalSettings,
+    ILogger<ConfigurationService> logger)
     {
         _httpClient = httpClient;
-        _http_route = globalSettings.BackendHTTPUrl + _route;
         _logger = logger;
+        var builder = new UriBuilder(httpClient.BaseAddress!)
+        {
+            Port = int.Parse(globalSettings.BackendPort),
+            Path = _route
+        };
+        _http_route = builder.Uri.ToString();
     }
 
     public async Task<Models.Config> GetConfigAsync()
