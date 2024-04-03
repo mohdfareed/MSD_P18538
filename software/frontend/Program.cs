@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Frontend;
 using MudBlazor.Services;
+using Frontend;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -12,6 +12,7 @@ var uri = new Uri(builder.HostEnvironment.BaseAddress);
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = uri });
 builder.Services.AddScoped<Services.ConfigurationService>();
 builder.Services.AddScoped<Services.TranscriptionService>();
+builder.Services.AddScoped<Services.AudioService>();
 builder.Services.AddMudServices();
 
 // global settings

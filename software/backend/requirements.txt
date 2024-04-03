@@ -6,6 +6,7 @@ websockets # websocket server
 # transcription
 SpeechRecognition # speech recognition
 openai # whisper recognition engine
+numpy # array manipulation, required by SpeechRecognition
 
 # audio
 pyaudio # device microphone and speaker interface

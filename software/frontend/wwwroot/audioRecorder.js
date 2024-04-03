@@ -1,48 +1,54 @@
-const CHUNK_SIZE = 1000; // milliseconds
-let mediaRecorder = null;
-let mediaStream = null;
-var config = { // REVIEW: must match MicConfig model class
-    sample_rate: 48000,
-    sample_width: 16,
-    num_channels: 1,
+const CHUNK_SIZE = 500; // milliseconds
+const CONFIG = {
+    audio: {
+        sampleRate: 48000,
+        sampleSize: 16,
+        channelCount: 1
+    }
 };
 
-async function startRecording(dotNetReference, callback, configCallback) {
+let mediaRecorder = null;
+let mediaStream = null;
 
-    // enable microphone and ask for permission
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(mediaStream);
-    settings = mediaStream.getAudioTracks()[0].getSettings();
+async function record(dotNetReference, callback, configCallback) {
+    if (mediaRecorder) {
+        console.log("Recording already in progress");
+        return;
+    }
 
-    // config.sample_rate = settings.sampleRate;
-    // config.sample_width = settings.sampleSize;
-    // config.num_channels = settings.channelCount;
+    await navigator.mediaDevices.getUserMedia(CONFIG)
+        .then(stream => {
+            mediaStream = stream;
 
-    // send audio config to C# code
-    console.log(mediaStream.getAudioTracks()[0].getSettings());
-    console.log(config);
-    let json_config = JSON.stringify(config);
-    dotNetReference.invokeMethodAsync(configCallback, json_config);
+            // log active configuration
+            const settings = stream.getAudioTracks()[0].getSettings();
+            console.log(settings);
 
-    // send audio data to C# code
-    mediaRecorder.ondataavailable = async (event) => {
-        const blob = event.data;
-        console.log(blob);
+            // send configuration to backend
+            dotNetReference.invokeMethodAsync(configCallback,
+                settings.sampleRate ?? CONFIG.audio.sampleRate,
+                settings.sampleSize ?? CONFIG.audio.sampleSize,
+                settings.channelCount ?? CONFIG.audio.channelCount,
+            );
 
-        if (event.data.size > 0) {
-            let arrayBuffer = await event.data.arrayBuffer();
-            let audioData = new Uint8Array(arrayBuffer); // audio bytes
-            dotNetReference.invokeMethodAsync(callback, audioData)
-        }
-    };
+            // start recording
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start(CHUNK_SIZE);
+            mediaRecorder.ondataavailable = async (e) => {
+                const audioData = new Uint8Array(await e.data.arrayBuffer());
+                dotNetReference.invokeMethodAsync(callback, audioData);
+            };
 
-    // record in chunks of time (milliseconds)
-    // mediaRecorder.start(CHUNK_SIZE);
+            console.log("Recording started");
+        });
 }
 
-async function stopRecording() {
+function stopRecording() {
     mediaRecorder?.stop();
-    mediaStream?.getTracks().forEach(track => track.stop());
     mediaRecorder = null;
+
+    mediaStream?.getTracks().forEach(track => track.stop());
     mediaStream = null;
+
+    console.log("Recording stopped");
 }
