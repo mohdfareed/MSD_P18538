@@ -31,7 +31,7 @@ def main(debug=False):
         LOGGER.exception(e)
         exit(1)
     finally:
-        LOGGER.debug("Backend server stopped.")
+        LOGGER.debug("Backend server stopped")
         logging.shutdown()
 
 
