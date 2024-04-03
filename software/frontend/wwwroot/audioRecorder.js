@@ -11,6 +11,11 @@ let mediaRecorder = null;
 let mediaStream = null;
 
 async function record(dotNetReference, callback, configCallback) {
+    if (mediaRecorder) {
+        console.log("Recording already in progress");
+        return;
+    }
+
     await navigator.mediaDevices.getUserMedia(CONFIG)
         .then(stream => {
             mediaStream = stream;

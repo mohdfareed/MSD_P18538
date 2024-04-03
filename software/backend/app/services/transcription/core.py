@@ -45,12 +45,12 @@ async def start(mic_config: MicrophoneConfig, audio_source: Event[bytes]):
     audio_event, cancel_recorder = await recorder.start_recorder(
         mic_config, audio_source
     )
-    await audio_event.subscribe(audio_handler)
+    # await audio_event.subscribe(audio_handler)
 
     async def stop():  # stop recording and transcribing
         global transcription_event
         transcription_event = None
-        await audio_event.unsubscribe(audio_handler)
+        # await audio_event.unsubscribe(audio_handler)
         await cancel_recorder()
 
     cancellation_event = Event()

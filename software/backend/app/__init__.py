@@ -66,4 +66,4 @@ for module in reduced_logging_modules:
     logging.getLogger(module).setLevel(logging.WARNING)
 
 if int(os.getenv("NOLOG", "0")) != 1:  # don't log on import
-    LOGGER.info("Backend server started.")
+    LOGGER.info("Backend server started")
