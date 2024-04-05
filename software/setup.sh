@@ -103,14 +103,12 @@ sudo openssl verify /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
 
 # Install services
 cd $app_dir/software # Change to dir of this script again
-sudo cp ./backend.service /etc/systemd/user/backend.service
-sudo cp ./frontend.service /etc/systemd/user/frontend.service
+sudo cp ./software.service /etc/systemd/user/software.service
 
 # Refresh systemd (reload service files)
 sudo systemctl --user daemon-reload
 sudo systemctl --global daemon-reload
 
 # Enable services to start on boot
-sudo systemctl --global enable backend
-sudo systemctl --global enable frontend
+sudo systemctl --global enable software.service
 sudo reboot # Restart the system to apply some changes
