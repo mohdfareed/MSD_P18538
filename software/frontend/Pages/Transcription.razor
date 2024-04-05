@@ -1,5 +1,6 @@
 @page "/"
 @layout StudentLayout
+@inject NavigationManager NavigationManager
 @inject Services.TranscriptionService TranscriptionService
 @using MudBlazor
 
@@ -23,6 +24,15 @@
     </MudCardActions>
 </MudCard>
 
+@* spacer *@
+<div style="height: 50px;"></div>
+
+<MudExpansionPanels>
+    <MudExpansionPanel Text="QR Code">
+        <MudImage Fluid="true" Src="@GetQrCodeUrl()" Alt="QR Code"
+        Width="540" Height="540" Elevation="25" Class="square"/>
+    </MudExpansionPanel>
+</MudExpansionPanels>
 
 
 @code {
@@ -58,5 +68,12 @@
         // update last line with new text
         transcriptions[^1] = text;
         StateHasChanged();
+    }
+
+    private string GetQrCodeUrl()
+    {
+        string currentUrl = NavigationManager.Uri;
+        string qrCodeBaseUrl = "https://api.qrserver.com/v1/create-qr-code/";
+        return $"{qrCodeBaseUrl}?size=540x540&data={System.Web.HttpUtility.UrlEncode(currentUrl)}";
     }
 }
