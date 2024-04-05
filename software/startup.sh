@@ -26,4 +26,11 @@ tmux send-keys -t $SESSION_NAME:1 "source ./environment.sh" C-m
 tmux send-keys -t $SESSION_NAME "$VENV" C-m              # Activate venv
 tmux send-keys -t $SESSION_NAME "$BACKEND_SCRIPT" C-m    # Start backend
 tmux send-keys -t $SESSION_NAME:1 "$FRONTEND_SCRIPT" C-m # Start frontend
-tmux attach -t $SESSION_NAME                             # Attach to session
+
+if ! command -v chromium-browser &> /dev/null; then
+  echo "chromium-browser not found"
+  exit 0
+fi
+# Open web browser to the frontend
+ip=$(hostname -I | awk '{print $1}')
+chromium-browser --app=https://$ip 2> /dev/null &
