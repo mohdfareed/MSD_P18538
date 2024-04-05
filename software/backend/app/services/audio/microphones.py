@@ -5,12 +5,11 @@ Provides interfaces for various microphone sources.
 """
 
 import asyncio
-import fcntl
 import os
 import subprocess
 import wave
 
-from fastapi import WebSocketDisconnect, WebSocketException, status
+from fastapi import WebSocketException, status
 
 from ...models.microphone import MicrophoneConfig
 from ..events import EventHandler
@@ -81,36 +80,22 @@ async def create_websocket_mic(websocket: WebSocketConnection):
     assert config.num_channels == 1  # only supported number of channels
     LOGGER.debug(f"Received microphone config: {config}")
 
-    process = subprocess.Popen(  # audio stream decoding process
-        [
-            "ffmpeg",
-            "-i",
-            "pipe:0",
-            "-f",
-            "wav",
-            "-ar",
-            str(config.sample_rate),
-            "-ac",
-            str(config.num_channels),
-            "pipe:1",
-        ],
+    # audio stream decoding process
+    process = await asyncio.create_subprocess_exec(
+        "ffmpeg",
+        "-i",
+        "pipe:0",
+        "-f",
+        "wav",
+        "-ar",
+        str(config.sample_rate),
+        "-ac",
+        str(config.num_channels),
+        "pipe:1",
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
-        bufsize=10**8,
     )
-
-    # ensure process pipes are open
-    if not process.stdout or not process.stdin:
-        raise WebSocketException(
-            reason="Error starting ffmpeg audio decoding process",
-            code=status.WS_1011_INTERNAL_ERROR,
-        )
-
-    # start process with stdout as non-blocking
-    flags = fcntl.fcntl(process.stdout, fcntl.F_GETFL)
-    fcntl.fcntl(process.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-    LOGGER.debug(f"Starting audio decoding process: {process.pid}")
 
     async def receive_audio():
         nonlocal websocket, process
@@ -121,24 +106,23 @@ async def create_websocket_mic(websocket: WebSocketConnection):
         # ensure process pipes are still open
         if not process.stdout or not process.stdin:
             raise WebSocketException(
-                reason="Error starting ffmpeg audio decoding process",
+                reason="Audio decoding process terminated unexpectedly",
                 code=status.WS_1011_INTERNAL_ERROR,
             )
 
-        # decode audio data from webm to wav
         try:
+            # decode audio data from webm to wav
             process.stdin.write(audio_bytes)
-            process.stdin.flush()
-        except BrokenPipeError:  # process pipe closed
-            return b""
+            await process.stdin.drain()
 
-        # read decoded audio data
-        audio_bytes = b""
-        while True:
-            try:  # read all available data from the pipe
-                return os.read(process.stdout.fileno(), 10**8)
-            except BlockingIOError:
-                pass
+            # read decoded audio data
+            audio_bytes = await asyncio.wait_for(process.stdout.read(10**8), 1)
+            return audio_bytes
+        except (BrokenPipeError, asyncio.CancelledError):
+            return b""
+        except asyncio.TimeoutError:
+            LOGGER.error("Audio decoding process timed out")
+            return b""
 
     async def shutdown():
         nonlocal websocket, process
@@ -146,7 +130,6 @@ async def create_websocket_mic(websocket: WebSocketConnection):
         await asyncio.sleep(0.5)  # time for resources to clean up
         process.kill()
         process.stdin.close() if process.stdin else None
-        process.stdout.close() if process.stdout else None
         LOGGER.debug("Audio decoding process terminated")
 
     cancellation_handler = EventHandler(shutdown, one_shot=True)
