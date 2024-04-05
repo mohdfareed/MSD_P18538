@@ -3,19 +3,17 @@
 # This is the script primarily meant for setting up a new RPi
 # It sets up the environment for the backend (python) and frontend (.net)
 app_dir="$HOME/MSD_P18538" # The directory where the app is located
-load_env="$app_dir/software/environment.sh"
+env="$app_dir/software/environment.sh"
 
-# Ask user for password for https certificates
-echo "Please enter the password for the HTTPS certificates"
-read -s password
+# Update machine and setup environment
+sudo apt update && sudo apt upgrade -y
+# Install dependencies for project
+sudo apt install tmux git -y
 
 # Clone the repository if it doesn't exist
 if [ ! -d "$app_dir" ]; then
   git clone https://github.com/BrianMonclus/MSD_P18538.git $app_dir
 fi
-
-# Update machine and setup environment
-sudo apt update && sudo apt upgrade -y
 echo "source $env" >> ~/.bashrc
 
 # Setup backend environment
@@ -35,13 +33,15 @@ sudo apt install ffmpeg -y          # Audio decoding
 # Install python environment manager
 sudo rm -rf ~/.pyenv
 sudo curl https://pyenv.run | bash
-source $load_env
+source $env
+cd $app_dir
 
-# Setup python environment
+# Install python 3.12 and set it as the active version
 req_file="$app_dir/software/backend/requirements.txt"
 pyenv install 3.12            # Install python 3.12
-pyenv virtualenv 3.12 backend # Create virtual environment
-pyenv activate backend        # Activate virtual environment
+pyenv local 3.12              # Set python 3.12 as the local version
+python -m venv .venv          # Create virtual environment
+source .venv/bin/activate     # Activate virtual environment
 pip install -r $req_file      # Install dependencies
 
 # Validate python version
@@ -50,7 +50,7 @@ if [ "$py_ver" != "3.12" ]; then
   echo "Python version is not 3.12"
   exit 1
 fi
-pyenv deactivate # Deactivate virtual environment after validation
+deactivate # Deactivate virtual environment after validation
 
 # Setup .net environment
 # =============================================================================
@@ -59,7 +59,7 @@ pyenv deactivate # Deactivate virtual environment after validation
 # more info: https://learn.microsoft.com/en-us/dotnet/iot/deployment
 cd ~
 sudo curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --version latest
-source $load_env
+source $env
 sudo rm -f /usr/local/bin/dotnet
 sudo ln -s $DOTNET_ROOT/dotnet /usr/local/bin/dotnet
 
