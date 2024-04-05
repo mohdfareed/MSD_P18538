@@ -2,20 +2,32 @@
 
 import logging
 import os
-import platform
 import subprocess
+import threading
+from contextlib import asynccontextmanager
 
 import uvicorn
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 LOGGER = logging.getLogger(__name__)
 HOST = "0.0.0.0"
 PORT = 9600
-CERTIFICATE_NAME = "MSD_P18538"
+CERTIFICATE_PORT = 9601
+CERTIFICATE_DOMAINS = ["localhost", "*.local"]
 
+# certificate paths
 backend = os.path.dirname(os.path.realpath(__file__))
-cert_path = os.path.join(backend, "data", "cert.pem")
-key_path = os.path.join(backend, "data", "key.pem")
+software = os.path.dirname(backend)
+cert_path = os.path.join(software, "certificates", "certificate.pem")
+key_path = os.path.join(software, "certificates", "private.key")
+# root CA path
+_root_ca_dir = (
+    subprocess.check_output("mkcert -CAROOT", shell=True).decode().strip()
+)
+root_ca = os.path.join(_root_ca_dir, "rootCA.pem")
 
 
 def main(debug=False):
@@ -26,20 +38,27 @@ def main(debug=False):
     """
 
     setup_environment(debug)
+    cert_thread = threading.Thread(target=start_cert_server)
+    cert_thread.start()
+
     try:  # start server
         uvicorn.run(  # TODO: check available uvicorn options
             "app.main:app",
             host=HOST,
             port=PORT,
+            ssl_certfile=cert_path,
+            ssl_keyfile=key_path,
             reload=debug,
             log_config=None,
         )
     except Exception as e:
         LOGGER.exception(e)
-        exit(1)
+        os._exit(1)
     finally:
+        print()
         LOGGER.debug("Backend server stopped")
         logging.shutdown()
+        os._exit(0)
 
 
 def setup_environment(debug):
@@ -53,107 +72,43 @@ def setup_environment(debug):
     LOGGER.debug("Debug mode enabled")
 
 
-def setup_https():
-    """Set up HTTPS certificates for the server."""
-    need_generate = False
+def start_cert_server():
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        LOGGER.info("Certificate server started")
+        yield
+        LOGGER.debug("Certificate server stopped")
 
-    # check if certificates exist
-    if not os.path.exists(cert_path) or not os.path.exists(key_path):
-        LOGGER.warning("No HTTPS certificates found. Generating new ones")
-        need_generate = True
-    else:  # check if certificates are expired
-        result = subprocess.run(
-            ["openssl", "x509", "-checkend", "0", "-noout", "-in", cert_path],
-            capture_output=True,
+    cert_app = FastAPI(lifespan=lifespan)
+    cert_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+        allow_credentials=True,
+    )
+
+    @cert_app.get("/")
+    async def root():
+        LOGGER.info("Serving certificate")
+        return FileResponse(
+            root_ca,
+            media_type="application/x-pem-file",
+            filename="root_ca.pem",
         )
-        if result.returncode != 0:  # certificate expired
-            LOGGER.warning("HTTPS certificates expired. Generating new ones")
-            need_generate = True
-    if not need_generate:
-        return
 
-    # remove old trusted certificates by common name
-    if platform.system() == "Darwin":  # macOS
-        # find the certificate by its Common Name and get its SHA-1 hash
-        find_cert_cmd = [
-            "security",
-            "find-certificate",
-            "-c",
-            CERTIFICATE_NAME,
-            "-a",
-            "-Z",
-        ]
-        result = subprocess.run(
-            find_cert_cmd, capture_output=True, text=True, check=True
+    @cert_app.get("/health")
+    async def health():
+        LOGGER.info("Health check passed.")
+        return {"message": "Certificate server running"}
+
+    try:
+        uvicorn.run(  # start server
+            cert_app, host=HOST, port=CERTIFICATE_PORT, log_config=None
         )
-        # extract SHA-1 hashes from the command output
-        hashes = [
-            line.split(": ")[1]
-            for line in result.stdout.split("\n")
-            if line.startswith("SHA-1 hash")
-        ]
-        # delete certificates by their SHA-1 hash
-        for hash_value in hashes:
-            delete_cert_cmd = [
-                "sudo",
-                "security",
-                "delete-certificate",
-                "-Z",
-                hash_value,
-            ]
-            subprocess.run(delete_cert_cmd, capture_output=True, check=True)
-            LOGGER.info(
-                f"Successfully deleted certificate with SHA-1 hash: {hash_value}"
-            )
-    elif platform.system() == "Linux":  # Linux
-        # remove all certificates from the trusted store
-        remove_cert_cmd = [
-            "sudo",
-            "rm",
-            "-f",
-            "/usr/local/share/ca-certificates/*",
-        ]
-        subprocess.run(remove_cert_cmd, capture_output=True, check=True)
-    LOGGER.info("Removed old trusted certificates")
-
-    # generate new certificates
-    cmd = [
-        "openssl",
-        "req",
-        "-new",
-        "-x509",
-        "-keyout",
-        key_path,
-        "-out",
-        cert_path,
-        "-days",
-        "365",
-        "-nodes",
-        "-subj",
-        f"/C=US/ST=NY/L=Rochester/O=RIT/CN={CERTIFICATE_NAME}",
-    ]
-    result = subprocess.run(cmd, capture_output=True, check=True)
-    LOGGER.info("Generated new HTTPS certificates")
-
-    # trust the certificates
-    if platform.system() == "Darwin":  # macOS
-        trust_cmd = ["sudo", "security", "add-trusted-cert", cert_path]
-        subprocess.run(trust_cmd, capture_output=True, check=True)
-        LOGGER.info("Certificate trusted successfully")
-    elif platform.system() == "Linux":  # Linux
-        trust_cmd = [
-            "sudo",
-            "cp",
-            cert_path,
-            "/usr/local/share/ca-certificates/",
-        ]
-        subprocess.run(trust_cmd, capture_output=True, check=True)
-        subprocess.run(
-            ["sudo", "update-ca-certificates"], capture_output=True, check=True
-        )
-        LOGGER.info("Certificate trusted successfully")
-    else:
-        LOGGER.warning("Cannot trust certificate automatically on this system")
+    except Exception as e:
+        LOGGER.exception(e)
+        LOGGER.error("Certificate server failed to start")
 
 
 if __name__ == "__main__":
