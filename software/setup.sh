@@ -5,6 +5,10 @@
 app_dir="$HOME/MSD_P18538" # The directory where the app is located
 load_env="$app_dir/software/environment.sh"
 
+# Ask user for password for https certificates
+echo "Please enter the password for the HTTPS certificates"
+read -s password
+
 # Clone the repository if it doesn't exist
 if [ ! -d "$app_dir" ]; then
   git clone https://github.com/BrianMonclus/MSD_P18538.git $app_dir
@@ -13,12 +17,6 @@ fi
 # Update machine and setup environment
 sudo apt update && sudo apt upgrade -y
 echo "source $env" >> ~/.bashrc
-
-# For adhoc network ensure we have dhcp server downloaded and configured to
-# automatically handle IP hosting
-sudo apt install isc-dhcp-server -y
-dhcpd_conf="$app_dir/software/backend/app/services/network/dhcpd.conf"
-sudo cp $dhcpd_conf /etc/dhcp/dhcpd.conf
 
 # Setup backend environment
 # =============================================================================
@@ -33,7 +31,6 @@ sudo apt install build-essential gdb lcov pkg-config portaudio19-dev \
 # Install dependencies for the backend
 sudo apt install portaudio19-dev -y # Audio input/output
 sudo apt install ffmpeg -y          # Audio decoding
-sudo apt install openssl -y         # HTTPS certificate generation
 
 # Install python environment manager
 sudo rm -rf ~/.pyenv
@@ -55,14 +52,6 @@ if [ "$py_ver" != "3.12" ]; then
 fi
 pyenv deactivate # Deactivate virtual environment after validation
 
-# Generate certificates for backend https
-# sudo curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
-# sudo chmod +x mkcert-v*-linux-amd64
-# sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
-# cd $app_dir/software/backend/data
-# sudo mkcert -install
-# sudo mkcert localhost *.local
-
 # Setup .net environment
 # =============================================================================
 
@@ -74,12 +63,39 @@ source $load_env
 sudo rm -f /usr/local/bin/dotnet
 sudo ln -s $DOTNET_ROOT/dotnet /usr/local/bin/dotnet
 
+# Setup AdHoc network
+# =============================================================================
+
+# For adhoc network ensure we have dhcp server downloaded and configured to
+# automatically handle IP hosting
+sudo apt install isc-dhcp-server -y
+dhcpd_conf="$app_dir/software/backend/app/services/network/dhcpd.conf"
+sudo cp $dhcpd_conf /etc/dhcp/dhcpd.conf
+
+# Setup HTTPS certificates
+# =============================================================================
+
+# Install mkcert for generating certificates
+sudo curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
+sudo chmod +x mkcert-v*-linux-amd64
+sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
+sudo rm mkcert-v*-linux-amd64
+sudo mkcert -install
+
+# Generate certificates for backend
+cd $app_dir/software/certificates
+sudo mkcert -cert-file certificate.pem -key-file private.key \
+  'localhost' '*.local' # FIXME: Add IP address of the RPi
+sudo cp cert.pem /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
+sudo update-ca-certificates
+sudo openssl verify /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
+
 # Generate certificates for frontend https
-# sudo dotnet dev-certs --clean
-# sudo dotnet dev-certs https --format pem \
-#   --export-path /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
-# sudo update-ca-certificates
-# sudo openssl verify /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
+sudo dotnet dev-certs --clean
+sudo dotnet dev-certs https --format pem \
+  --export-path /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
+sudo update-ca-certificates
+sudo openssl verify /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
 
 # Setup services
 # =============================================================================
