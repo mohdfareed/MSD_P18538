@@ -6,7 +6,7 @@ from ..services.control import motors
 router = APIRouter()
 
 
-@router.post("/control/", status_code=status.HTTP_200_OK)
+@router.post("/control/movement", status_code=status.HTTP_200_OK)
 async def move(movement: Movement):
     try:
         motors.drive(movement)
@@ -15,8 +15,11 @@ async def move(movement: Movement):
 
     return {"message": "Car moved"}
 
-
-@router.post("/control/stop", status_code=status.HTTP_200_OK)
-async def stop():
-    motors.drive(Movement(speed=0, angle=0))
-    return {"message": "Car stopped"}
+@router.post("/control/siren")
+async def enableSiren(bool: enabled):
+    try:
+        # todo: Implement the GPIO to drive the Siren
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid value")
+    
+    return {"message": "Siren updated"}
