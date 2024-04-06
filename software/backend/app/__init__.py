@@ -12,7 +12,6 @@ from logging.handlers import RotatingFileHandler
 
 from rich.logging import RichHandler
 
-FRONTEND_URL = os.getenv("FRONTEND_URL")
 LOGGER = logging.getLogger(__name__)
 
 app_dir = os.path.dirname(os.path.realpath(__file__))
@@ -24,6 +23,7 @@ logging_file = os.path.join(data_dir, "logs", "backend.log")
 debug = os.getenv("DEBUG", "False").lower() == "true"
 reduced_logging_modules = [
     "uvicorn.error",
+    "asyncio",
 ]  # modules with reduced logging level
 
 # logging formats
@@ -66,4 +66,4 @@ for module in reduced_logging_modules:
     logging.getLogger(module).setLevel(logging.WARNING)
 
 if int(os.getenv("NOLOG", "0")) != 1:  # don't log on import
-    LOGGER.info("Backend server started.")
+    LOGGER.info("Backend server started")

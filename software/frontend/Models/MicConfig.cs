@@ -11,8 +11,5 @@ public class MicConfig
     public int SampleWidth { get; set; }
 
     [JsonPropertyName("num_channels")]
-    public int NumChannels { get; set; }
-
-    [JsonPropertyName("chunk_size")]
-    public int ChunkSize { get; set; }
+    public int ChannelCount { get; set; }
 }

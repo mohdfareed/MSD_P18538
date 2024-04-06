@@ -7,6 +7,8 @@ import uvicorn
 from dotenv import load_dotenv
 
 LOGGER = logging.getLogger(__name__)
+HOST = "0.0.0.0"
+PORT = 9600
 
 
 def main(debug=False):
@@ -20,8 +22,8 @@ def main(debug=False):
     try:  # start server
         uvicorn.run(  # TODO: check available uvicorn options
             "app.main:app",
-            host=os.getenv("HOST", ""),
-            port=int(os.getenv("PORT") or 0),
+            host=HOST,
+            port=PORT,
             reload=debug,
             log_config=None,
         )
@@ -29,7 +31,7 @@ def main(debug=False):
         LOGGER.exception(e)
         exit(1)
     finally:
-        LOGGER.debug("Backend server stopped.")
+        LOGGER.debug("Backend server stopped")
         logging.shutdown()
 
 

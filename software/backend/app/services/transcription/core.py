@@ -20,44 +20,69 @@ PHRASE_TERMINATOR = "\n"
 _PHRASE_TIMEOUT = 2.5  #  the maximum pause between phrases (seconds)
 _MIN_RECORD_DURATION = 0.5  # the minimum recording duration (seconds)
 
+transcription_event: Event[str] | None = None
+"""The global transcription event."""
 
-async def start_transcription(mic_config: MicrophoneConfig, mic_event: Event):
+
+async def start(mic_config: MicrophoneConfig, audio_source: Event[bytes]):
     """Start transcribing audio from a microphone using a speech recognition
     engine.
 
     Args:
-        engine (RecognitionEngine): The speech recognition engine.
         mic_config (MicrophoneConfig): The microphone configuration.
-        mic_event (Event): The audio event triggered on new microphone data.
+        audio_source (Event[bytes]): The audio event triggered on new audio
+        data.
 
     Returns:
-        Tuple[Event[str], CancellationToken]: The transcription event and the
-            cancellation token.
+        CancellationToken: The transcription cancellation token.
     """
+    global transcription_event
+    assert transcription_event is None, "Transcription is already running"
 
     # initialize transcription
-    transcript_event = Event[str]()
-    transcript_handler = await _create_handler(mic_config)
+    transcription_event, audio_handler = await _create_handler(mic_config)
     # start recording and transcribing
-    record_event, record_canceller = await recorder.start_recorder(
-        mic_config, mic_event
+    audio_event, cancel_recorder = await recorder.start_recorder(
+        mic_config, audio_source
     )
-    await record_event.subscribe(transcript_handler)
+    # await audio_event.subscribe(audio_handler)
 
     async def stop():  # stop recording and transcribing
-        await record_event.unsubscribe(transcript_handler)
-        await record_canceller()
+        global transcription_event
+        transcription_event = None
+        # await audio_event.unsubscribe(audio_handler)
+        await cancel_recorder()
 
     cancellation_event = Event()
-    handler = EventHandler(stop, one_shot=True)
-    await cancellation_event.subscribe(handler)
-    return transcript_event, cancellation_event
+    await cancellation_event.subscribe(EventHandler(stop, one_shot=True))
+    return cancellation_event
+
+
+def event():
+    """Get the global transcription event.
+
+    Returns:
+        Event[str]: The transcription event.
+    """
+    global transcription_event
+    return transcription_event
 
 
 async def _create_handler(mic_config: MicrophoneConfig):
+    """Create a transcription event that triggers when new transcriptions are
+    available and an audio handler that processes audio data.
+
+    Args:
+        mic_config (MicrophoneConfig): The microphone configuration.
+
+    Returns:
+        Event[str]: The transcription event.
+        EventHandler: The audio date handler.
+    """
     transcript_event = Event[str]()
     phrase_time = datetime.min  # last time new audio was received
     phrase_buffer = bytes()  # buffer of incomplete phrase audio
+
     # mutex locks
     time_lock = asyncio.Lock()
     buffer_lock = asyncio.Lock()
@@ -67,7 +92,7 @@ async def _create_handler(mic_config: MicrophoneConfig):
 
         # check for a new phrase (pause in speech)
         async with time_lock:
-            now = datetime.utcnow()
+            now = datetime.now()
             if now - phrase_time > timedelta(seconds=_PHRASE_TIMEOUT):
                 # indicate a pause between phrases
                 await transcript_event.trigger(PHRASE_TERMINATOR)
@@ -98,7 +123,9 @@ async def _create_handler(mic_config: MicrophoneConfig):
             LOGGER.exception(f"Error recognizing audio: {e}")
             return
 
-    return EventHandler(handler)
+    return transcript_event, EventHandler(
+        handler, timeout=None, sequential=True
+    )
 
 
 def create_console_display():
