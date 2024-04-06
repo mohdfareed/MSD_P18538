@@ -1,9 +1,9 @@
 @page "/controller"
-@inject Services.ControllerService Controller
+@inject Services.ControllerService ControllerService
 @using MudBlazor
 @inject ISnackbar Snackbar
 
-<PageTitle>Contoroller</PageTitle>
+<PageTitle>Controller</PageTitle>
 
 <MudGrid >
     @* todo: implement a button for the siren @Icons.Material.Filled.WbTwighlight *@
@@ -31,13 +31,13 @@
 @code {
     private Models.Movement movement = new();
 
-    private async Task (string direction, bool set)
+    private async Task RobotCTL(string direction, bool set)
     {
         // Update movement instance
         movement.direction = direction;
         movement.enabled = set;
 
-        await Controller.SendCommandAsync();
+        await ControllerService.SendCommandAsync(movement);
         switch (direction)
         {
             case "forward":
