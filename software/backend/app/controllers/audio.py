@@ -22,7 +22,7 @@ async def stream_audio(websocket: WebSocket):
     LOGGER.info("Microphone connected")
 
     # start speaker and transcription
-    audio_event, audio_token = await player.start_audio_player(mic)
+    audio_event, player_token = await player.start_audio_player(mic)
     speaker_token = await speakers.start_speaker(config, audio_event)
     LOGGER.info("Speaker started")
     transcription_token = await transcription.start(config, audio_event)
@@ -31,7 +31,7 @@ async def stream_audio(websocket: WebSocket):
     async def shutdown():
         await transcription_token()
         await speaker_token()
-        await audio_token()
+        await player_token()
         await mic_token()
 
     shutdown_callback = EventHandler(shutdown, one_shot=True)

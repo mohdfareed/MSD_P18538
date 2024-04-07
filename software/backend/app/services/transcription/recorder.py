@@ -1,7 +1,5 @@
 import asyncio
-import os
 import queue
-import wave
 
 import speech_recognition as sr
 
@@ -55,9 +53,10 @@ async def start_recorder(mic_config: MicrophoneConfig, mic_event: Event):
 
     # stop recording when cancelled
     async def stop():
-        nonlocal recording_stopper
+        nonlocal recording_stopper, mic_event
         recording_stopper()
         await mic_event.unsubscribe(source.audio_handler)
+        LOGGER.debug("Transcription recording stopped")
 
     cancellation_event = Event()
     cancellation_handler = EventHandler(stop, one_shot=True)
@@ -66,14 +65,8 @@ async def start_recorder(mic_config: MicrophoneConfig, mic_event: Event):
 
 
 def _create_trigger_wrapper(event: Event):
-    if os.path.exists("test.wav"):
-        os.remove("test.wav")
-
     def trigger_wrapper(_, audio_data: sr.AudioData):
         global recording_loop
-
-        with open("test.wav", "ab") as file:
-            file.write(audio_data.get_wav_data())
 
         async def async_wrapper():
             await event.trigger(audio_data)
@@ -100,7 +93,6 @@ class BufferedAudioSource(sr.AudioSource):
         self.SAMPLE_RATE = mic_config.sample_rate
         self.SAMPLE_WIDTH = mic_config.sample_width
         self.CHUNK = mic_config.chunk_size
-        LOGGER.info(f"Audio source initialized: {mic_config}")
 
     def __enter__(self):
         return self
@@ -114,16 +106,18 @@ class BufferedAudioSource(sr.AudioSource):
             self.config = mic_config
 
         def write(self, data: bytes):
-            # write audio data to the buffer, one byte at a time
             for byte in data:
                 self.buffer.put(byte)
 
         def read(self, size: int) -> bytes:
-            data = b""
-            while len(data) < size:
-                try:
-                    data += bytes(self.buffer.get())
+            data = bytearray()
+            num_bytes = (
+                size * self.config.sample_width * self.config.num_channels
+            )
+
+            for _ in range(num_bytes):
+                try:  # stop if no data is available for 0.5 seconds
+                    data.append(self.buffer.get(timeout=0.5))
                 except queue.Empty:
-                    continue
-            LOGGER.warning(f"Read {len(data)} bytes")
+                    return b""
             return data

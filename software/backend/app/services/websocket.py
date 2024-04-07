@@ -77,7 +77,7 @@ class WebSocketConnection:
     async def _receive(self, receiver):
         try:
             if self._websocket.client_state != WebSocketState.CONNECTED:
-                return  # client disconnected
+                raise asyncio.CancelledError  # client disconnected
             return await receiver()
         except WebSocketDisconnect:
             await self.disconnection_event()

@@ -25,7 +25,7 @@ async def stream_transcription(websocket: WebSocket):
     await socket.connect()
     handler = EventHandler(socket.send)
     await transcription_event.subscribe(handler)
-    LOGGER.warning("Transcription client connected")
+    LOGGER.info("Transcription client connected")
 
     async def stop():
         await transcription_event.unsubscribe(handler)
@@ -33,4 +33,4 @@ async def stream_transcription(websocket: WebSocket):
     stop_callback = EventHandler(stop, one_shot=True)
     await socket.disconnection_event.subscribe(stop_callback)
     await socket.disconnection_event.until_triggered()
-    LOGGER.warning("Transcription client disconnected")
+    LOGGER.info("Transcription client disconnected")

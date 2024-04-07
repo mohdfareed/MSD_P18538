@@ -86,7 +86,7 @@ async def create_websocket_mic(websocket: WebSocketConnection):
         "-i",
         "pipe:0",
         "-f",
-        "wav",
+        "s16le",
         "-ar",
         str(config.sample_rate),
         "-ac",
