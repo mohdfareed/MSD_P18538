@@ -1,7 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
+@inject ThemeService ThemeService
 
-<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" />
+<MudThemeProvider @ref="@_mudThemeProvider" Theme="@ThemeService.RITColorTheme" @bind-IsDarkMode="@_isDarkMode" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 

@@ -1,7 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
+@inject ThemeService ThemeService
 
-<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" />
+<MudThemeProvider @ref="@_mudThemeProvider" Theme="@ThemeService.RITColorTheme" @bind-IsDarkMode="@_isDarkMode" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
@@ -34,7 +35,7 @@
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
         <MudDrawerHeader>
-            <MudText Typo="Typo.h6">Frontend</MudText>
+            <img src="@_logo" alt="RIT collapsed logo" style="width: 100%; height: auto;"/>
         </MudDrawerHeader>
         <NavMenu />
     </MudDrawer>
@@ -49,6 +50,7 @@
     private MudThemeProvider _mudThemeProvider = new MudThemeProvider();
     private bool _drawerOpen = true;
     private bool _isDarkMode;
+    private string _logo = "rit_logo_light.svg";
 
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -56,6 +58,14 @@
         if (firstRender)
         {
             _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            if (_isDarkMode)
+            {
+                _logo = "rit_logo_dark.svg";
+            }
+            else
+            {
+                _logo = "rit_logo_light.svg";
+            }
             StateHasChanged();
         }
     }
@@ -68,6 +78,14 @@
     void ToggleDarkMode()
     {
         _isDarkMode = !_isDarkMode;
+        if (_isDarkMode)
+        {
+            _logo = "rit_logo_dark.svg";
+        }
+        else
+        {
+            _logo = "rit_logo_light.svg";
+        }
     }
 
     private string GetCertificateUrl()
