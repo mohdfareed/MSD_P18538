@@ -83,18 +83,19 @@ def register_validator(validator: Callable[[Config], None]):
 
 
 def _load_config(config_file: str) -> Config:
+    config = Config()
     try:
         with open(config_file, "r") as file:
-            return Config(**json.load(file))
+            config = Config(**json.load(file))
     except FileNotFoundError:
         LOGGER.warning("Configuration file not found. Creating new file")
-        return _store_config(Config())
+        _store_config(config)
     except Exception as e:
         LOGGER.exception(f"Error loading configuration: {e}")
         LOGGER.warning("Using default configuration")
-        return Config()
     finally:
-        LOGGER.debug("Configuration loaded")
+        LOGGER.debug(f"Configuration loaded: {config}")
+        return config
 
 
 def _store_config(config: Config) -> Config:
@@ -106,7 +107,7 @@ def _store_config(config: Config) -> Config:
         LOGGER.exception(f"Error storing configuration: {e}")
         return config
     finally:
-        LOGGER.debug("Configuration stored")
+        LOGGER.debug(f"Configuration changed: {config}")
 
 
 class ValidationError(Exception):
@@ -115,7 +116,5 @@ class ValidationError(Exception):
     ...
 
 
-LOGGER.info("Configurator service started")
-LOGGER.warning(f"Configuration file: {config_file}")
+LOGGER.debug(f"Configuration file: {config_file}")
 config = _load_config(config_file)
-LOGGER.debug(f"Loaded config: {config}")

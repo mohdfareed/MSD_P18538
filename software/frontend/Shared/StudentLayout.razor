@@ -1,0 +1,68 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+
+<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0">
+        @* dark mode toggle *@
+        @if (_isDarkMode)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Brightness7" Color="Color.Inherit"
+                OnClick="@((e) => ToggleDarkMode())" />
+        }
+        else
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Brightness4" Color="Color.Inherit"
+                OnClick="@((e) => ToggleDarkMode())" />
+        }
+
+        @* https certificate link *@
+        <MudIconButton Icon="@Icons.Material.Filled.Shield" Color="Color.Inherit"
+            Href="@GetCertificateUrl()" Target="_blank" />
+
+        @* github link *@
+        <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
+            Href="https://github.com/BrianMonclus/MSD_P18538" Target="_blank" />
+    </MudAppBar>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="my-16 pt-16">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private MudThemeProvider _mudThemeProvider = new MudThemeProvider();
+    private bool _drawerOpen = true;
+    private bool _isDarkMode;
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            StateHasChanged();
+        }
+    }
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    void ToggleDarkMode()
+    {
+        _isDarkMode = !_isDarkMode;
+    }
+
+    private string GetCertificateUrl()
+    {
+        var currentUri = new Uri(NavigationManager.Uri);
+        string host = currentUri.Host;
+        return $"http://{host}:9601";
+    }
+}

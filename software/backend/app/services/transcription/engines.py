@@ -33,6 +33,8 @@ async def recognize(audio_data: sr.AudioData) -> str:
         raise UnrecognizedAudioError from e
     except sr.RequestError as e:
         raise RecognitionEngineError from e
+    except Exception as e:
+        raise RecognitionEngineError from e
 
 
 def _google_recognize(audio_data: sr.AudioData) -> str:
@@ -42,7 +44,7 @@ def _google_recognize(audio_data: sr.AudioData) -> str:
 
 def _whisper_recognize(audio_data: sr.AudioData) -> str:
     global recognizer
-    return recognizer.recognize_whisper(audio_data)
+    return recognizer.recognize_whisper_api(audio_data)  # type: ignore
 
 
 class RecognitionEngineError(Exception):

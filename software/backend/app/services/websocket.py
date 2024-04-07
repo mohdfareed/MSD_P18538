@@ -9,7 +9,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
 
 import asyncio
 import logging
-from typing import Any, Coroutine, Type, TypeVar
+from typing import Any, Type, TypeVar
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
@@ -57,35 +57,36 @@ class WebSocketConnection:
                 await self._websocket.send_json(data)
         except WebSocketDisconnect:  # treat as a cancelled operation
             await self.disconnection_event()
-            raise asyncio.CancelledError("WebSocket disconnected")
+            raise asyncio.CancelledError
+        except RuntimeError as e:  # if sending while client disconnected
+            await self.disconnection_event()
+            raise asyncio.CancelledError from e
 
     async def receive_bytes(self) -> bytes:
         """Receive bytes from the WebSocket."""
-        return await self._receive(self._websocket.receive_bytes())
-
-    async def receive_text(self) -> str:
-        """Receive text from the WebSocket."""
-        return await self._receive(self._websocket.receive_text())
+        return await self._receive(self._websocket.receive_bytes) or b""
 
     async def receive_obj(self, cls: Type[T]) -> T:
         """Receive an object from the WebSocket."""
-        return cls(**await self._receive(self._websocket.receive_json()))
+        try:
+            return cls(**await self._receive(self._websocket.receive_json))
+        except TypeError:
+            LOGGER.error(f"Failed to receive object of type: {cls.__name__}")
+            raise WebSocketDisconnect
 
-    async def _receive(self, receiver: Coroutine):
+    async def _receive(self, receiver):
         try:
             if self._websocket.client_state != WebSocketState.CONNECTED:
-                raise RuntimeError("WebSocket client is not connected")
-            return await receiver
+                raise asyncio.CancelledError  # client disconnected
+            return await receiver()
         except WebSocketDisconnect:
             await self.disconnection_event()
-            raise asyncio.CancelledError("WebSocket disconnected")
 
     async def disconnect(self):
         """Disconnect the WebSocket."""
-        if self._websocket.state != WebSocketState.CONNECTED:
-            return  # already disconnected
-
         try:
+            if self._websocket.state != WebSocketState.CONNECTED:
+                return  # already disconnected
             await self._websocket.close()
         except Exception as e:
             LOGGER.exception(e)

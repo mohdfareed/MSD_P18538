@@ -58,7 +58,7 @@ async def _listen_to_stream(
             await asyncio.sleep(0)  # important for multithreading
 
     except asyncio.CancelledError:
-        LOGGER.info("Shutting down microphone")
+        pass  # cancelled
     except Exception as e:
         LOGGER.exception(e)
     finally:  # cleanup

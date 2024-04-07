@@ -2,21 +2,20 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketException, status
 
-from ..services import transcription
-from ..services.audio import microphones, player, speakers
-from ..services.events import Event, EventHandler
+from ..services import transcription as transcription_service
+from ..services.events import EventHandler
 from ..services.websocket import WebSocketConnection
 
 LOGGER = logging.getLogger(__name__)
 
 router = APIRouter()
-_transcription: Event[str] | None = None  # transcription event
 
 
-@router.websocket("/transcription/stream")
+@router.websocket("/transcription")
 async def stream_transcription(websocket: WebSocket):
-    global _transcription
-    if _transcription is None:
+    transcription_event = transcription_service.event()
+    if transcription_event is None:
+        LOGGER.error("Transcription requested but service is not running")
         raise WebSocketException(
             reason="Transcription service is not running",
             code=status.WS_1002_PROTOCOL_ERROR,
@@ -25,42 +24,13 @@ async def stream_transcription(websocket: WebSocket):
     socket = WebSocketConnection(websocket)
     await socket.connect()
     handler = EventHandler(socket.send)
-    await _transcription.subscribe(handler)
-    LOGGER.warning("Transcription client connected")
+    await transcription_event.subscribe(handler)
+    LOGGER.info("Transcription client connected")
 
+    async def stop():
+        await transcription_event.unsubscribe(handler)
 
-@router.websocket("/transcription/start")
-async def start_transcription(websocket: WebSocket):
-    global _transcription
-    assert _transcription is None, "Transcription service is already running"
-    socket = WebSocketConnection(websocket)
-
-    # mic, config = await microphones.create_websocket_mic(socket)
-    # LOGGER.debug("Websocket microphone created. Config: %s", config)
-    mic, config, mic_token = microphones.create_local_mic()  # FIXME: local mic
-    audio_event, audio_token = await player.start_audio_player(mic)
-    LOGGER.debug("Microphone started")
-    speaker_token = await speakers.start_speaker(config, audio_event)
-    LOGGER.debug("Speaker started")
-
-    # start transcription
-    # engine = transcription.engines.WhisperEngine()
-    # (
-    #     _transcription,
-    #     transcription_token,
-    # ) = await transcription.start_transcription(engine, config, audio_event)
-    # await _transcription.subscribe(transcription.create_console_display())
-    # LOGGER.debug("Transcription started")
-
-    async def shutdown():
-        global _transcription
-        await speaker_token()
-        await audio_token()
-        await mic_token()
-        # await transcription_token()
-        _transcription = None
-        LOGGER.debug("Transcription stopped")
-
-    shutdown_callback = EventHandler(shutdown, one_shot=True)
-    await socket.disconnection_event.subscribe(shutdown_callback)
+    stop_callback = EventHandler(stop, one_shot=True)
+    await socket.disconnection_event.subscribe(stop_callback)
     await socket.disconnection_event.until_triggered()
+    LOGGER.info("Transcription client disconnected")

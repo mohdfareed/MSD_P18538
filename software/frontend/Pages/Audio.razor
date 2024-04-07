@@ -1,10 +1,9 @@
-@page "/"
-@layout StudentLayout
-@inject NavigationManager NavigationManager
+@page "/instructor"
 @inject Services.TranscriptionService TranscriptionService
+@inject Services.AudioService AudioService
 @using MudBlazor
 
-<PageTitle>Transcription</PageTitle>
+<PageTitle>Audio</PageTitle>
 <MudText Typo="Typo.h3" Class="mb-3">Live Transcript</MudText>
 <MudCard>
     <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
@@ -21,24 +20,28 @@
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Error"
                 OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
         }
+
+        @if (isRecording)
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Warning"
+                OnClick="@(recordingCTS.Cancel)">Recording...</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Error"
+                OnClick="@(async () => await StartRecording())">Not recording</MudButton>
+        }
     </MudCardActions>
 </MudCard>
 
-@* spacer *@
-<div style="height: 50px;"></div>
-
-<MudExpansionPanels>
-    <MudExpansionPanel Text="QR Code">
-        <MudImage Fluid="true" Src="@GetQrCodeUrl()" Alt="QR Code"
-        Width="540" Height="540" Elevation="25" Class="square"/>
-    </MudExpansionPanel>
-</MudExpansionPanels>
 
 
 @code {
     private List<string> transcriptions = new List<string> { "" };
     private CancellationTokenSource transcriptionCTS = new();
+    private CancellationTokenSource recordingCTS = new();
     private bool isTranscribing = false;
+    private bool isRecording = false;
 
     private async Task StartTranscription()
     {
@@ -56,6 +59,21 @@
         StateHasChanged();
     }
 
+    public async Task StartRecording()
+    {
+        recordingCTS.Cancel();
+        isRecording = true;
+
+        recordingCTS = new CancellationTokenSource();
+        recordingCTS.Token.Register(() => {
+            isRecording = false; StateHasChanged();
+        });
+
+        await AudioService.StartAudioStreamingAsync(recordingCTS.Cancel,
+        recordingCTS.Token);
+        StateHasChanged();
+    }
+
     private void OnTranscriptionReceived(string text)
     {
         // check if a new phrase is starting
@@ -68,12 +86,5 @@
         // update last line with new text
         transcriptions[^1] = text;
         StateHasChanged();
-    }
-
-    private string GetQrCodeUrl()
-    {
-        string currentUrl = NavigationManager.Uri;
-        string qrCodeBaseUrl = "https://api.qrserver.com/v1/create-qr-code/";
-        return $"{qrCodeBaseUrl}?size=540x540&data={System.Web.HttpUtility.UrlEncode(currentUrl)}";
     }
 }

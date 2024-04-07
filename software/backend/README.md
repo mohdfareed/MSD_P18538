@@ -10,6 +10,7 @@ The project is written in Python, and uses the [FastAPI](https://fastapi.tiangol
 ## Requirements
 
 - [Python >=3.12](https://www.python.org/downloads/release/python-370/)
+- OpenAI API key (for Whisper speech-to-text engine)
 
 ## Development Setup
 
@@ -24,7 +25,7 @@ pip install -r requirements.txt # install dependencies
 Test the backend by sending a request to the server:
 
 ```sh
-curl -i -X GET http://localhost:8000/
+curl -i -X GET http://localhost:9600/
 ```
 
 Which results in the following response:
