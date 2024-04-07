@@ -13,42 +13,28 @@ public class ThemeService
         {
             Palette = new Palette()
             {
-                Black = "#27272f",
                 Primary = "#F76902",
+                Secondary = "#FFFFFF",
+                TextPrimary = "#000000",
                 Background = "#FAFAFA",
-                BackgroundGrey = "#F5F5F5",
                 Surface = "#FFFFFF",
                 DrawerBackground = "#FFFFFF",
-                DrawerText = "#27272f",
-                DrawerIcon = "#27272f",
-                AppbarBackground = "#27272f",
-                AppbarText = "#FFFFFF",
-                TextPrimary = "#27272f",
-                TextSecondary = "#757575",
-                ActionDefault = "#27272f",
-                ActionDisabled = "#E0E0E0",
-                ActionDisabledBackground = "#F5F5F5",
-                // Add other color overrides here
+                DrawerText = "#F76902",
+                DrawerIcon = "#000000",
+                AppbarBackground = "#F76902",
             },
             PaletteDark = new Palette()
             {
-                Black = "#27272f",
                 Primary = "#F76902",
-                Background = "#FAFAFA",
-                BackgroundGrey = "#F5F5F5",
-                Surface = "#FFFFFF",
-                DrawerBackground = "#FFFFFF",
-                DrawerText = "#27272f",
-                DrawerIcon = "#27272f",
-                AppbarBackground = "#27272f",
-                AppbarText = "#FFFFFF",
-                TextPrimary = "#27272f",
-                TextSecondary = "#757575",
-                ActionDefault = "#27272f",
-                ActionDisabled = "#E0E0E0",
-                ActionDisabledBackground = "#F5F5F5",
+                Secondary = "#000000",
+                TextPrimary = "#FFFFFF",
+                Background = "#181818",
+                Surface = "#1F1F1F",
+                DrawerBackground = "#000000",
+                DrawerText = "#F76902",
+                DrawerIcon = "#FFFFFF",
+                AppbarBackground = "#F76902",
             },
-            // Can also customize Typography, ZIndex, LayoutProperties, etc.
         };
     }
 }
