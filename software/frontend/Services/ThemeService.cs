@@ -4,37 +4,29 @@ namespace Services;
 
 public class ThemeService
 {
-    public MudTheme RITColorTheme { get; private set; }
+    public MudTheme RITColorTheme { get; private set; } = new MudTheme();
 
 
     public ThemeService()
     {
-        RITColorTheme = new MudTheme()
-        {
-            Palette = new Palette()
-            {
-                Primary = "#F76902",
-                Secondary = "#FFFFFF",
-                TextPrimary = "#000000",
-                Background = "#FAFAFA",
-                Surface = "#FFFFFF",
-                DrawerBackground = "#FFFFFF",
-                DrawerText = "#F76902",
-                DrawerIcon = "#000000",
-                AppbarBackground = "#F76902",
-            },
-            PaletteDark = new Palette()
-            {
-                Primary = "#F76902",
-                Secondary = "#000000",
-                TextPrimary = "#FFFFFF",
-                Background = "#181818",
-                Surface = "#1F1F1F",
-                DrawerBackground = "#000000",
-                DrawerText = "#F76902",
-                DrawerIcon = "#FFFFFF",
-                AppbarBackground = "#F76902",
-            },
-        };
+        RITColorTheme.Palette.Primary = "#F76902";
+        RITColorTheme.Palette.Secondary = "#FFFFFF";
+        RITColorTheme.Palette.TextPrimary = "#000000";
+        RITColorTheme.Palette.Background = "#FAFAFA";
+        RITColorTheme.Palette.Surface = "#FFFFFF";
+        RITColorTheme.Palette.DrawerBackground = "#FFFFFF";
+        RITColorTheme.Palette.DrawerText = "#F76902";
+        RITColorTheme.Palette.DrawerIcon = "#000000";
+        RITColorTheme.Palette.AppbarBackground = "#F76902";
+
+        RITColorTheme.PaletteDark.Primary = "#F76902";
+        RITColorTheme.PaletteDark.Secondary = "#000000";
+        RITColorTheme.PaletteDark.TextPrimary = "#FFFFFF";
+        RITColorTheme.PaletteDark.Background = "#181818";
+        RITColorTheme.PaletteDark.Surface = "#1F1F1F";
+        RITColorTheme.PaletteDark.DrawerBackground = "#000000";
+        RITColorTheme.PaletteDark.DrawerText = "#F76902";
+        RITColorTheme.PaletteDark.DrawerIcon = "#FFFFFF";
+        RITColorTheme.PaletteDark.AppbarBackground = "#F76902";
     }
 }

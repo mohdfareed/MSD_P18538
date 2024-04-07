@@ -35,7 +35,7 @@
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
         <MudDrawerHeader>
-            <img src="RIT_rgb_hor_k1.svg" alt="RIT collapsed logo" style="width: 100%; height: auto;"/>
+            <img src="@_logo" alt="RIT collapsed logo" style="width: 100%; height: auto;"/>
         </MudDrawerHeader>
         <NavMenu />
     </MudDrawer>
@@ -50,6 +50,7 @@
     private MudThemeProvider _mudThemeProvider = new MudThemeProvider();
     private bool _drawerOpen = true;
     private bool _isDarkMode;
+    private string _logo = "rit_logo_light.svg";
 
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -57,6 +58,14 @@
         if (firstRender)
         {
             _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            if (_isDarkMode)
+            {
+                _logo = "rit_logo_dark.svg";
+            }
+            else
+            {
+                _logo = "rit_logo_light.svg";
+            }
             StateHasChanged();
         }
     }
@@ -69,6 +78,14 @@
     void ToggleDarkMode()
     {
         _isDarkMode = !_isDarkMode;
+        if (_isDarkMode)
+        {
+            _logo = "rit_logo_dark.svg";
+        }
+        else
+        {
+            _logo = "rit_logo_light.svg";
+        }
     }
 
     private string GetCertificateUrl()
