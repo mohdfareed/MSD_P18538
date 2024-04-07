@@ -10,6 +10,7 @@ The project is written in Python, and uses the [FastAPI](https://fastapi.tiangol
 ## Requirements
 
 - [Python >=3.12](https://www.python.org/downloads/release/python-370/)
+- OpenAI API key (for Whisper speech-to-text engine)
 
 ## Development Setup
 
