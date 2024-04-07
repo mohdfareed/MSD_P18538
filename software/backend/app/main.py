@@ -23,4 +23,4 @@ app.add_middleware(
 @app.get("/health")
 async def root():
     LOGGER.info("Health check passed.")
-    return {"message": "Running"}
+    return {"message": "Backend server running"}

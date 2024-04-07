@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+
 import logging
 import os
 
-frontend_dir = os.path.dirname(os.path.realpath(__file__))
+frontend = os.path.dirname(os.path.realpath(__file__))
 
 
 def main(debug=False):
@@ -13,7 +14,7 @@ def main(debug=False):
     """
 
     dotnet = (
-        f"dotnet {'watch' if debug else ''} run --project {frontend_dir} "
+        f"dotnet {'watch' if debug else ''} run --project {frontend} "
         f"--configuration {'Debug' if debug else 'Release'}"
     )  # the dotnet command to run the frontend server
 

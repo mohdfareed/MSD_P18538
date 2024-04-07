@@ -1,10 +1,10 @@
-@page "/audio"
+@page "/instructor"
 @inject Services.TranscriptionService TranscriptionService
 @inject Services.AudioService AudioService
 @using MudBlazor
 
 <PageTitle>Audio</PageTitle>
-<MudText Typo="Typo.h3" Class="mb-3">Live Transcription</MudText>
+<MudText Typo="Typo.h3" Class="mb-3">Live Transcript</MudText>
 <MudCard>
     <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
         <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>

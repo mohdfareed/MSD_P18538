@@ -56,7 +56,7 @@ async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
             stream.stop_stream()
             stream.close()
         except Exception as e:
-            LOGGER.error(f"Failed to stop speaker: {e}")
+            LOGGER.error(f"Exception stopping speaker: {e}")
         finally:
             LOGGER.debug("Speaker stopped")
 

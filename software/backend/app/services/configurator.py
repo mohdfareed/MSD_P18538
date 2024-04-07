@@ -93,8 +93,6 @@ def _load_config(config_file: str) -> Config:
         LOGGER.exception(f"Error loading configuration: {e}")
         LOGGER.warning("Using default configuration")
         return Config()
-    finally:
-        LOGGER.debug("Configuration loaded")
 
 
 def _store_config(config: Config) -> Config:
@@ -115,7 +113,6 @@ class ValidationError(Exception):
     ...
 
 
-LOGGER.info("Configurator service started")
-LOGGER.warning(f"Configuration file: {config_file}")
+LOGGER.debug(f"Configuration file: {config_file}")
 config = _load_config(config_file)
 LOGGER.debug(f"Loaded config: {config}")

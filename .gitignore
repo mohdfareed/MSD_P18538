@@ -1,2 +1,7 @@
 .vscode/*
 !.vscode/extensions.json
+
+# https certificates
+*.pem
+*.crt
+*.key

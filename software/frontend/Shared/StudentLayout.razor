@@ -7,11 +7,6 @@
 
 <MudLayout>
     <MudAppBar Elevation="0">
-        @* side panel *@
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
-            OnClick="@((e) => DrawerToggle())" />
-        <MudSpacer />
-
         @* dark mode toggle *@
         @if (_isDarkMode)
         {
@@ -32,12 +27,6 @@
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
             Href="https://github.com/BrianMonclus/MSD_P18538" Target="_blank" />
     </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
-        <MudDrawerHeader>
-            <MudText Typo="Typo.h6">Frontend</MudText>
-        </MudDrawerHeader>
-        <NavMenu />
-    </MudDrawer>
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.Large" Class="my-16 pt-16">
             @Body
