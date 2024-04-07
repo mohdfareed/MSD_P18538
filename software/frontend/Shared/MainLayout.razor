@@ -1,7 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
+@inject ThemeService ThemeService
 
-<MudThemeProvider @ref="@_mudThemeProvider" Theme="@RITColorTheme" @bind-IsDarkMode="@_isDarkMode" />
+<MudThemeProvider @ref="@_mudThemeProvider" Theme="@ThemeService.RITColorTheme" @bind-IsDarkMode="@_isDarkMode" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
@@ -50,47 +51,6 @@
     private bool _drawerOpen = true;
     private bool _isDarkMode;
 
-    MudTheme RITColorTheme = new MudTheme()
-    {
-        Palette = new Palette()
-        {
-            Black = "#27272f",
-            Primary = "#F76902",
-            Background = "#FAFAFA",
-            BackgroundGrey = "#F5F5F5",
-            Surface = "#FFFFFF",
-            DrawerBackground = "#FFFFFF",
-            DrawerText = "#27272f",
-            DrawerIcon = "#27272f",
-            AppbarBackground = "#27272f",
-            AppbarText = "#FFFFFF",
-            TextPrimary = "#27272f",
-            TextSecondary = "#757575",
-            ActionDefault = "#27272f",
-            ActionDisabled = "#E0E0E0",
-            ActionDisabledBackground = "#F5F5F5",
-            // Add other color overrides here
-        },
-        PaletteDark = new Palette()
-        {
-            Black = "#27272f",
-            Primary = "#F76902",
-            Background = "#FAFAFA",
-            BackgroundGrey = "#F5F5F5",
-            Surface = "#FFFFFF",
-            DrawerBackground = "#FFFFFF",
-            DrawerText = "#27272f",
-            DrawerIcon = "#27272f",
-            AppbarBackground = "#27272f",
-            AppbarText = "#FFFFFF",
-            TextPrimary = "#27272f",
-            TextSecondary = "#757575",
-            ActionDefault = "#27272f",
-            ActionDisabled = "#E0E0E0",
-            ActionDisabledBackground = "#F5F5F5",
-        },
-        // Can also customize Typography, ZIndex, LayoutProperties, etc.
-    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
