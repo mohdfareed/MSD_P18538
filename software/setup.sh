@@ -5,6 +5,10 @@
 app_dir="$HOME/MSD_P18538" # The directory where the app is located
 env="$app_dir/software/environment.sh"
 
+# Ask user for info
+echo "Enter your OpenAI API key:"
+read -r OPENAI_API_KEY
+
 # Update machine and setup environment
 sudo apt update && sudo apt upgrade -y
 # Install dependencies for project
@@ -15,6 +19,7 @@ if [ ! -d "$app_dir" ]; then
   git clone https://github.com/BrianMonclus/MSD_P18538.git $app_dir
 fi
 echo "source $env" >> ~/.bashrc
+echo "export OPEN_AI_API_KEY=$OPENAI_API_KEY" >> ~/.bashrc
 
 # Setup backend environment
 # =============================================================================

@@ -39,18 +39,18 @@ async def start(mic_config: MicrophoneConfig, audio_source: Event[bytes]):
     global transcription_event
     assert transcription_event is None, "Transcription is already running"
 
-    # initialize transcription
-    transcription_event, audio_handler = await _create_handler(mic_config)
-    # start recording and transcribing
+    # start listening to the microphone
     audio_event, cancel_recorder = await recorder.start_recorder(
         mic_config, audio_source
     )
-    # await audio_event.subscribe(audio_handler)
+    # initialize transcription
+    transcription_event, audio_handler = await _create_handler(mic_config)
+    await audio_event.subscribe(audio_handler)
 
     async def stop():  # stop recording and transcribing
         global transcription_event
         transcription_event = None
-        # await audio_event.unsubscribe(audio_handler)
+        await audio_event.unsubscribe(audio_handler)
         await cancel_recorder()
 
     cancellation_event = Event()

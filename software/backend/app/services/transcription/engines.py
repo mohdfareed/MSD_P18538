@@ -28,13 +28,12 @@ async def recognize(audio_data: sr.AudioData) -> str:
     global recognizer, config, active_engine
 
     try:
-        # return await asyncio.to_thread(active_engine, audio_data)
-        # return active_engine(audio_data)
-        await asyncio.sleep(1)
-        return "Hello World"
+        return await asyncio.to_thread(active_engine, audio_data)
     except sr.UnknownValueError as e:
         raise UnrecognizedAudioError from e
     except sr.RequestError as e:
+        raise RecognitionEngineError from e
+    except Exception as e:
         raise RecognitionEngineError from e
 
 
@@ -45,7 +44,7 @@ def _google_recognize(audio_data: sr.AudioData) -> str:
 
 def _whisper_recognize(audio_data: sr.AudioData) -> str:
     global recognizer
-    return recognizer.recognize_whisper(audio_data)
+    return recognizer.recognize_whisper_api(audio_data)  # type: ignore
 
 
 class RecognitionEngineError(Exception):
