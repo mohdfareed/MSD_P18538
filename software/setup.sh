@@ -89,9 +89,8 @@ sudo mkcert -install
 
 # Generate certificates for backend
 cd $app_dir/software/certificates
-ip_addr=$(hostname -I | awk '{print $1}')
 sudo mkcert -cert-file certificate.pem -key-file private.key \
-  'localhost' '*.local' "$ip_addr" # FIXME: Add IP address of the RPi
+  'localhost' '*.local' '*.student.rit.edu'
 sudo cp cert.pem /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
 sudo update-ca-certificates
 sudo openssl verify /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
