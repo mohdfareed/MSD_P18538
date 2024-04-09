@@ -42,7 +42,7 @@ def main(debug=False):
     cert_thread.start()
 
     try:  # start server
-        uvicorn.run(  # TODO: check available uvicorn options
+        uvicorn.run(
             "app.main:app",
             host=HOST,
             port=PORT,
@@ -51,7 +51,7 @@ def main(debug=False):
             reload=debug,
             log_config=None,
         )
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         LOGGER.exception(e)
         os._exit(1)
     finally:
@@ -62,17 +62,21 @@ def main(debug=False):
 
 
 def setup_environment(debug):
+    """Set up the environment and logging."""
+
     load_dotenv()
     os.environ["DEBUG"] = str(debug)
     os.environ["NOLOG"] = str(1)  # don't log on import
     import app
 
     os.unsetenv("NOLOG")
-    LOGGER.info(f"Logging to files at: {os.path.dirname(app.logging_file)}/")
+    LOGGER.info("Logging to files at: %s/", os.path.dirname(app.logging_file))
     LOGGER.debug("Debug mode enabled")
 
 
 def start_cert_server():
+    """Start the certificate server."""
+
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         LOGGER.info("Certificate server started")
@@ -106,7 +110,7 @@ def start_cert_server():
         uvicorn.run(  # start server
             cert_app, host=HOST, port=CERTIFICATE_PORT, log_config=None
         )
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         LOGGER.exception(e)
         LOGGER.error("Certificate server failed to start")
 

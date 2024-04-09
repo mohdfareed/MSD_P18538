@@ -1,5 +1,4 @@
-"""
-WebSocket abstraction. This module provides a WebSocketConnection class that
+"""WebSocket abstraction. This module provides a WebSocketConnection class that
 abstracts away the WebSocket connection. It provides methods for sending and
 receiving data from the WebSocket connection.
 
@@ -9,7 +8,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
 
 import asyncio
 import logging
-from typing import Any, Type, TypeVar
+from typing import Any, TypeVar
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
@@ -55,9 +54,9 @@ class WebSocketConnection:
                 await self._websocket.send_text(data)
             else:
                 await self._websocket.send_json(data)
-        except WebSocketDisconnect:  # treat as a cancelled operation
+        except WebSocketDisconnect as e:  # treat as a cancelled operation
             await self.disconnection_event()
-            raise asyncio.CancelledError
+            raise asyncio.CancelledError from e
         except RuntimeError as e:  # if sending while client disconnected
             await self.disconnection_event()
             raise asyncio.CancelledError from e
@@ -66,13 +65,13 @@ class WebSocketConnection:
         """Receive bytes from the WebSocket."""
         return await self._receive(self._websocket.receive_bytes) or b""
 
-    async def receive_obj(self, cls: Type[T]) -> T:
+    async def receive_obj(self, cls: type[T]) -> T:
         """Receive an object from the WebSocket."""
         try:
             return cls(**await self._receive(self._websocket.receive_json))
-        except TypeError:
-            LOGGER.error(f"Failed to receive object of type: {cls.__name__}")
-            raise WebSocketDisconnect
+        except TypeError as e:
+            LOGGER.error("Failed to receive object of type: %s", cls.__name__)
+            raise WebSocketDisconnect from e
 
     async def _receive(self, receiver):
         try:
@@ -100,5 +99,3 @@ class WebSocketConnection:
 
     class DisconnectionEvent(Event):
         """Event triggered when the WebSocket is disconnected."""
-
-        pass

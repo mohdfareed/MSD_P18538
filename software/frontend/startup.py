@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import logging
 import os
 
 frontend = os.path.dirname(os.path.realpath(__file__))
@@ -13,16 +12,12 @@ def main(debug=False):
         debug (bool): Whether to start in debug mode and log debug messages.
     """
 
-    dotnet = (
-        f"dotnet {'watch' if debug else ''} run --project {frontend} "
-        f"--configuration {'Debug' if debug else 'Release'}"
-    )  # the dotnet command to run the frontend server
-
-    try:  # start server
-        os.system(dotnet)
-    except Exception as e:
-        logging.exception(e)
-        exit(1)
+    os.system(
+        (
+            f"dotnet {'watch' if debug else ''} run --project {frontend} "
+            f"--configuration {'Debug' if debug else 'Release'}"
+        )
+    )
 
 
 if __name__ == "__main__":
