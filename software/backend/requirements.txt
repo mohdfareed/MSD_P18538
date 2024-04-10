@@ -2,6 +2,7 @@
 fastapi # rest api framework
 uvicorn # asgi server
 websockets # websocket server
+aiofiles # static file serving
 
 # transcription
 SpeechRecognition==3.10 # speech recognition

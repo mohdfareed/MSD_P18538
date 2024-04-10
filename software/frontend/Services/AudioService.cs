@@ -4,7 +4,7 @@ namespace Services;
 
 public class AudioService
 {
-    const string _route = "audio"; // API route
+    const string _route = "api/audio"; // API route
 
     // dependencies
     private readonly IJSRuntime _jsRuntime;
@@ -18,9 +18,8 @@ public class AudioService
     private Action? _cancelCallback = null;
 
 
-    public AudioService(HttpClient httpClient,
-    Models.GlobalSettings globalSettings, IJSRuntime JSRuntime,
-    ILogger<AudioService> logger)
+    public AudioService(HttpClient httpClient, IJSRuntime JSRuntime,
+    Models.GlobalSettings globalSettings, ILogger<AudioService> logger)
     {
         _jsRuntime = JSRuntime;
         _objRef = DotNetObjectReference.Create(this);

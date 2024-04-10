@@ -4,7 +4,7 @@ namespace Services;
 
 public class TranscriptionService
 {
-    const string _route = "transcription"; // API route
+    const string _route = "api/transcription"; // API route
 
     // dependencies
     private readonly ILogger<TranscriptionService> _logger;
@@ -13,8 +13,7 @@ public class TranscriptionService
 
 
     public TranscriptionService(HttpClient httpClient,
-    Models.GlobalSettings globalSettings,
-    ILogger<TranscriptionService> logger)
+    Models.GlobalSettings globalSettings, ILogger<TranscriptionService> logger)
     {
         _logger = logger;
 
