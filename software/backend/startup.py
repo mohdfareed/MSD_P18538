@@ -22,12 +22,11 @@ ROOT_CA_DIR = (  # root CA path
 
 # project paths
 backend = os.path.dirname(os.path.realpath(__file__))
-software = os.path.dirname(backend)
-frontend = os.path.join(software, "frontend")
+frontend = os.path.join(os.path.dirname(backend), "frontend")
 
 # certificate paths
-cert_path = os.path.join(software, "certificates", "certificate.pem")
-key_path = os.path.join(software, "certificates", "private.key")
+cert_path = os.path.join(backend, "data", "certificate.pem")
+key_path = os.path.join(backend, "data", "private.key")
 root_ca = os.path.join(ROOT_CA_DIR, "rootCA.pem")
 
 

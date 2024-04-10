@@ -4,7 +4,7 @@ Description=Software Service
 [Service]
 Type=simple
 Restart=on-failure
-ExecStart=/bin/bash -c '~/MSD_P18538/software/startup.sh'
+ExecStart=/bin/bash -c '/home/pi/MSD_P18538/software/startup.sh'
 
 [Install]
 WantedBy=default.target

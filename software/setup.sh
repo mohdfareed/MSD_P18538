@@ -3,7 +3,10 @@
 # This is the script primarily meant for setting up a new RPi
 # It sets up the environment for the backend (python) and frontend (.net)
 app_dir="$HOME/MSD_P18538" # The directory where the app is located
-env="$app_dir/software/environment.sh"
+env="$app_dir/software/environment.sh" # The environment file
+cert_dir="$app_dir/software/backend/data" # The directory for certificates
+req_file="$app_dir/software/backend/requirements.txt" # The requirements file
+service_file="$app_dir/software/software.service" # The service file
 
 # Ask user for info
 echo "Enter your OpenAI API key:"
@@ -42,20 +45,12 @@ source $env
 cd $app_dir
 
 # Install python 3.12 and set it as the active version
-req_file="$app_dir/software/backend/requirements.txt"
 pyenv install 3.12            # Install python 3.12
 pyenv local 3.12              # Set python 3.12 as the local version
 python -m venv .venv          # Create virtual environment
 source .venv/bin/activate     # Activate virtual environment
 pip install -r $req_file      # Install dependencies
-
-# Validate python version
-py_ver=$(python --version | awk '{print $2}' | awk -F. '{print $1 "." $2}')
-if [ "$py_ver" != "3.12" ]; then
-  echo "Python version is not 3.12"
-  exit 1
-fi
-deactivate # Deactivate virtual environment after validation
+deactivate                    # Deactivate virtual environment
 
 # Setup .net environment
 # =============================================================================
@@ -81,38 +76,24 @@ sudo cp $dhcpd_conf /etc/dhcp/dhcpd.conf
 # =============================================================================
 
 # Install mkcert for generating certificates
-sudo curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
-sudo chmod +x mkcert-v*-linux-amd64
-sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
-sudo rm mkcert-v*-linux-amd64
+sudo curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/arm64"
+sudo chmod +x mkcert-v*-linux-arm64
+sudo cp mkcert-v*-linux-arm64 /usr/local/bin/mkcert
+sudo rm mkcert-v*-linux-arm64
 sudo mkcert -install
 
-# Generate certificates for backend
-cd $app_dir/software/certificates
-sudo mkcert -cert-file certificate.pem -key-file private.key \
+# Generate certificates
+cd $cert_dir
+mkcert -cert-file certificate.pem -key-file private.key \
   'localhost' '*.local' '*.student.rit.edu'
-sudo cp cert.pem /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
+sudo cp certificate.pem /usr/local/share/ca-certificates/MSD_P18538.crt
 sudo update-ca-certificates
-sudo openssl verify /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
-
-# Generate certificates for frontend https
-sudo dotnet dev-certs --clean
-sudo dotnet dev-certs https --format pem \
-  --export-path /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
-sudo update-ca-certificates
-sudo openssl verify /usr/local/share/ca-certificates/MSD_P18538_frontend.crt
+sudo openssl verify /usr/local/share/ca-certificates/MSD_P18538.crt
 
 # Setup services
 # =============================================================================
 
-# Install services
-cd $app_dir/software # Change to dir of this script again
-sudo cp ./software.service /etc/systemd/user/software.service
-
-# Refresh systemd (reload service files)
-sudo systemctl --user daemon-reload
-sudo systemctl --global daemon-reload
-
-# Enable services to start on boot
-sudo systemctl --global enable software.service
+sudo cp $service_file /etc/systemd/user/software.service # Install services
+sudo systemctl daemon-reload # Refresh systemd (reload service files)
+sudo systemctl enable software.service # Enable services to start on boot
 sudo reboot # Restart the system to apply some changes
