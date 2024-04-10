@@ -14,6 +14,7 @@ builder.Services.AddScoped<Services.ConfigurationService>();
 builder.Services.AddScoped<Services.TranscriptionService>();
 builder.Services.AddScoped<Services.AudioService>();
 builder.Services.AddScoped<Services.ThemeService>();
+builder.Services.AddScoped<Services.ControlService>();
 builder.Services.AddMudServices();
 
 // global settings
