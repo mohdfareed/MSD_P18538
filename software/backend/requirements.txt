@@ -2,10 +2,11 @@
 fastapi # rest api framework
 uvicorn # asgi server
 websockets # websocket server
+aiofiles # static file serving
 
 # transcription
-SpeechRecognition # speech recognition
-openai # whisper recognition engine
+SpeechRecognition==3.10 # speech recognition
+openai==0.28 # whisper recognition engine
 numpy # array manipulation, required by SpeechRecognition
 
 # audio

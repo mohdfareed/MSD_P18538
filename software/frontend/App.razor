@@ -4,8 +4,9 @@
     </Found>
     <NotFound>
         <PageTitle>Not found</PageTitle>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
+        <LayoutView Layout="@typeof(StudentLayout)">
+            <MudText Typo="Typo.h1">404</MudText>
+            <MudText Typo="Typo.h2">Sorry, there's nothing at this address.</MudText>
         </LayoutView>
     </NotFound>
 </Router>

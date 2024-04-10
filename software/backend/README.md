@@ -80,6 +80,10 @@ classDiagram
             +start_transcription(websocket~bytes~ audio_data)
             +stream_transcription(WebSocket~str~ transcript)
         }
+
+        class audio_controller {
+            +start_streaming()
+        }
     }
 
     namespace models {
@@ -127,10 +131,11 @@ classDiagram
 
     configuration_controller --> configurator
     transcription_controller --> transcription
-    transcription_controller --> audio
+    audio_controller --> audio
 
     transcription --> configurator
     transcription --> event
+    audio --> configurator
     audio --> event
 
     network --> configurator

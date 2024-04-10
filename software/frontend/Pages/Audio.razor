@@ -3,7 +3,7 @@
 @inject Services.AudioService AudioService
 @using MudBlazor
 
-<PageTitle>Audio</PageTitle>
+<PageTitle>Instructor</PageTitle>
 <MudText Typo="Typo.h3" Class="mb-3">Live Transcript</MudText>
 <MudCard>
     <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
@@ -13,7 +13,7 @@
         @if (isTranscribing)
         {
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
-                OnClick="@(transcriptionCTS.Cancel)">Transcribing...</MudButton>
+                OnClick="@(transcriptionCTS.Cancel)">Transcribing</MudButton>
         }
         else
         {
@@ -24,7 +24,7 @@
         @if (isRecording)
         {
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Warning"
-                OnClick="@(recordingCTS.Cancel)">Recording...</MudButton>
+                OnClick="@(recordingCTS.Cancel)">Recording</MudButton>
         }
         else
         {
@@ -42,6 +42,11 @@
     private CancellationTokenSource recordingCTS = new();
     private bool isTranscribing = false;
     private bool isRecording = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await StartTranscription();
+    }
 
     private async Task StartTranscription()
     {

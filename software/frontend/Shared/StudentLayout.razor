@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 @inject ThemeService ThemeService
+@inject Models.GlobalSettings GlobalSettings
 
 <MudThemeProvider @ref="@_mudThemeProvider" Theme="@ThemeService.RITColorTheme" @bind-IsDarkMode="@_isDarkMode" />
 <MudDialogProvider />
@@ -64,6 +65,6 @@
     {
         var currentUri = new Uri(NavigationManager.Uri);
         string host = currentUri.Host;
-        return $"http://{host}:9601";
+        return $"http://{host}:{GlobalSettings.CertificatePort}";
     }
 }

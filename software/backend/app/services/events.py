@@ -1,5 +1,4 @@
-"""
-Events system. This is used to process outputs from services asynchronously.
+"""Events system. This is used to process outputs from services asynchronously.
 
 Callback functions can be registered to an event. When the event is triggered,
 all registered callbacks are called. Callbacks either be coroutines, coroutine
@@ -17,7 +16,8 @@ the task.
 import asyncio
 import functools
 import logging
-from typing import Any, Callable, Coroutine, Generic, get_args
+from collections.abc import Callable, Coroutine
+from typing import Any, Generic, get_args
 
 from typing_extensions import ParamSpec
 
@@ -73,9 +73,9 @@ class EventHandler(Generic[P]):
             try:
                 return await self._handler(*args, **kwargs)
             except asyncio.CancelledError:
-                LOGGER.debug(f"{self}: Cancelled")
+                LOGGER.debug("%s: Cancelled", self)
             except Exception as e:
-                LOGGER.exception(f"{self}: Error executing callback: {e}")
+                LOGGER.exception("%s: Error executing callback: %s", self, e)
             finally:
                 self._triggered = True  # callback was triggered
 
@@ -123,7 +123,9 @@ class EventHandler(Generic[P]):
                         await func(*args, **kwargs), duration
                     )
                 except asyncio.TimeoutError:
-                    LOGGER.error(f"{self} timed out after {duration} seconds")
+                    LOGGER.error(
+                        "%s timed out after %s seconds", self, duration
+                    )
 
             return wrapper
 
@@ -132,15 +134,12 @@ class EventHandler(Generic[P]):
     async def __call__(self, *args: P.args, **kwargs: P.kwargs):
         return await self.trigger(*args, **kwargs)
 
-    def __eq__(self, other: "EventHandler[P]") -> bool:
-        return self.callback == other.callback
-
     def __hash__(self) -> int:
         return hash(self.callback)
 
     def __repr__(self) -> str:
-        type = self.callback.__class__.__qualname__
-        return f"{self.callback.__qualname__}({type})"
+        handler_type = self.callback.__class__.__qualname__
+        return f"{self.callback.__qualname__}({handler_type})"
 
     def __del__(self):
         for task in self._running_tasks:
@@ -160,24 +159,24 @@ class Event(Generic[P]):
     async def subscribe(self, handler: EventHandler[P]):
         """Subscribe to the event."""
         async with self._handlers_lock:
-            LOGGER.debug(f"{self}: Subscribing {handler}")
+            LOGGER.debug("%s: Subscribing %s", self, handler)
             self.handlers.add(handler)
 
     async def unsubscribe(self, handler: EventHandler[P]):
         """Unsubscribe from the event."""
         async with self._handlers_lock:
-            LOGGER.debug(f"{self}: Unsubscribing {handler}")
+            LOGGER.debug("%s: Unsubscribing %s", self, handler)
             self.handlers.remove(handler)
 
     async def trigger(self, *args: P.args, **kwargs: P.kwargs):
         """Trigger the event."""
         self._event.set()
         for handler in set(self.handlers):
-            LOGGER.debug(f"{self}: Triggering {handler}")
+            LOGGER.debug("%s: Triggering %s", self, handler)
             try:
                 await handler(*args, **kwargs)
             except Exception as e:
-                LOGGER.exception(f"Error executing {handler}: {e}")
+                LOGGER.exception("Error executing %s: %s", handler, e)
             if handler.one_shot:  # done in background to avoid deadlocks
                 await self.unsubscribe(handler)
         self._event.clear()
@@ -203,5 +202,8 @@ class Event(Generic[P]):
         return f"{self.__class__.__qualname__}{get_args(self)}"
 
     def __del__(self):
-        for handler in set(self.handlers):
-            del handler
+        self._event.clear()
+        handlers_array = list(self.handlers)
+        for i in range(len(handlers_array) - 1, -1, -1):
+            self.handlers.remove(handlers_array[i])
+            del handlers_array[i]

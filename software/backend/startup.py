@@ -14,20 +14,20 @@ from fastapi.responses import FileResponse
 
 LOGGER = logging.getLogger(__name__)
 HOST = "0.0.0.0"
-PORT = 9600
-CERTIFICATE_PORT = 9601
-CERTIFICATE_DOMAINS = ["localhost", "*.local"]
-
-# certificate paths
-backend = os.path.dirname(os.path.realpath(__file__))
-software = os.path.dirname(backend)
-cert_path = os.path.join(software, "certificates", "certificate.pem")
-key_path = os.path.join(software, "certificates", "private.key")
-# root CA path
-_root_ca_dir = (
+PORT = 443
+CERTIFICATE_PORT = 9600
+ROOT_CA_DIR = (  # root CA path
     subprocess.check_output("mkcert -CAROOT", shell=True).decode().strip()
 )
-root_ca = os.path.join(_root_ca_dir, "rootCA.pem")
+
+# project paths
+backend = os.path.dirname(os.path.realpath(__file__))
+frontend = os.path.join(os.path.dirname(backend), "frontend")
+
+# certificate paths
+cert_path = os.path.join(backend, "data", "certificate.pem")
+key_path = os.path.join(backend, "data", "private.key")
+root_ca = os.path.join(ROOT_CA_DIR, "rootCA.pem")
 
 
 def main(debug=False):
@@ -36,13 +36,23 @@ def main(debug=False):
     Args:
         debug (bool): Whether to start in debug mode and log debug messages.
     """
-
     setup_environment(debug)
+
+    # build frontend
+    subprocess.run(
+        f"dotnet publish -c Release {frontend}",
+        shell=True,
+        check=True,
+        capture_output=True,
+    )
+    LOGGER.info("Frontend built")
+
+    # start certificate server
     cert_thread = threading.Thread(target=start_cert_server)
     cert_thread.start()
 
     try:  # start server
-        uvicorn.run(  # TODO: check available uvicorn options
+        uvicorn.run(
             "app.main:app",
             host=HOST,
             port=PORT,
@@ -51,7 +61,7 @@ def main(debug=False):
             reload=debug,
             log_config=None,
         )
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         LOGGER.exception(e)
         os._exit(1)
     finally:
@@ -62,17 +72,26 @@ def main(debug=False):
 
 
 def setup_environment(debug):
+    """Set up the environment and logging."""
+
+    frontend_build = os.path.join(
+        frontend, "bin", "Release", "net6.0", "publish", "wwwroot"
+    )
+
     load_dotenv()
+    os.environ["FRONTEND"] = frontend_build
     os.environ["DEBUG"] = str(debug)
     os.environ["NOLOG"] = str(1)  # don't log on import
-    import app
+    import app  # pylint: disable=import-outside-toplevel
 
     os.unsetenv("NOLOG")
-    LOGGER.info(f"Logging to files at: {os.path.dirname(app.logging_file)}/")
+    LOGGER.info("Logging to files at: %s/", os.path.dirname(app.logging_file))
     LOGGER.debug("Debug mode enabled")
 
 
 def start_cert_server():
+    """Start the certificate server."""
+
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         LOGGER.info("Certificate server started")
@@ -106,7 +125,7 @@ def start_cert_server():
         uvicorn.run(  # start server
             cert_app, host=HOST, port=CERTIFICATE_PORT, log_config=None
         )
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         LOGGER.exception(e)
         LOGGER.error("Certificate server failed to start")
 

@@ -9,7 +9,7 @@ import os
 import subprocess
 import wave
 
-from fastapi import WebSocketException, status
+from fastapi import WebSocketDisconnect, WebSocketException, status
 
 from ...models.microphone import MicrophoneConfig
 from ..events import EventHandler
@@ -99,7 +99,10 @@ async def create_websocket_mic(websocket: WebSocketConnection):
 
     async def receive_audio():
         nonlocal websocket, process
-        audio_bytes = await websocket.receive_bytes()
+        try:
+            audio_bytes = await websocket.receive_bytes()
+        except WebSocketDisconnect as e:
+            raise asyncio.CancelledError from e
         if not audio_bytes:
             return b""
 

@@ -1,6 +1,13 @@
+import asyncio
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketException, status
+from fastapi import (
+    APIRouter,
+    WebSocket,
+    WebSocketDisconnect,
+    WebSocketException,
+    status,
+)
 
 from ..services import transcription as transcription_service
 from ..services.events import EventHandler
@@ -29,8 +36,14 @@ async def stream_transcription(websocket: WebSocket):
 
     async def stop():
         await transcription_event.unsubscribe(handler)
+        LOGGER.info("Transcription client disconnected")
 
     stop_callback = EventHandler(stop, one_shot=True)
     await socket.disconnection_event.subscribe(stop_callback)
-    await socket.disconnection_event.until_triggered()
-    LOGGER.info("Transcription client disconnected")
+
+    while True:
+        try:  # keep connection alive
+            await socket.send("")
+        except WebSocketDisconnect:
+            break
+        await asyncio.sleep(1)
