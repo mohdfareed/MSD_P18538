@@ -14,7 +14,7 @@
         @if (isTranscribing)
         {
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
-                OnClick="@(transcriptionCTS.Cancel)">Transcribing...</MudButton>
+                OnClick="@(transcriptionCTS.Cancel)">Transcribing</MudButton>
         }
         else
         {
@@ -39,6 +39,11 @@
     private List<string> transcriptions = new List<string> { "" };
     private CancellationTokenSource transcriptionCTS = new();
     private bool isTranscribing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await StartTranscription();
+    }
 
     private async Task StartTranscription()
     {

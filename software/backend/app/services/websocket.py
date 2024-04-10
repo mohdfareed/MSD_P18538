@@ -30,36 +30,37 @@ class WebSocketConnection:
 
     async def connect(self):
         """Accept the WebSocket connection."""
+        handler = EventHandler(self.disconnect, one_shot=True)
+        await self.disconnection_event.subscribe(handler)
+
         try:
-            handler = EventHandler(self.disconnect, one_shot=True)
-            await self.disconnection_event.subscribe(handler)
             await self._websocket.accept()
-            LOGGER.debug("WebSocket connection accepted")
-        # reraise but add a more descriptive message
         except Exception as e:
             await self.disconnection_event()
             raise e.__class__(
                 f"Failed to accept WebSocket connection: {e}"
             ) from e
+        LOGGER.debug("WebSocket connection accepted")
 
     async def send(self, data: Any):
         """Send data through the WebSocket."""
-        try:
-            if self._websocket.client_state != WebSocketState.CONNECTED:
-                raise RuntimeError("WebSocket client is not connected")
+        if self._websocket.client_state != WebSocketState.CONNECTED:
+            await self.disconnection_event()
+            raise WebSocketDisconnect
 
+        async def _send(data):
             if isinstance(data, bytes):
                 await self._websocket.send_bytes(data)
             elif isinstance(data, str):
                 await self._websocket.send_text(data)
             else:
                 await self._websocket.send_json(data)
-        except WebSocketDisconnect as e:  # treat as a cancelled operation
+
+        try:
+            await _send(data)
+        except (WebSocketDisconnect, RuntimeError) as e:
             await self.disconnection_event()
-            raise asyncio.CancelledError from e
-        except RuntimeError as e:  # if sending while client disconnected
-            await self.disconnection_event()
-            raise asyncio.CancelledError from e
+            raise WebSocketDisconnect from e
 
     async def receive_bytes(self) -> bytes:
         """Receive bytes from the WebSocket."""
@@ -74,18 +75,23 @@ class WebSocketConnection:
             raise WebSocketDisconnect from e
 
     async def _receive(self, receiver):
+        if self._websocket.client_state != WebSocketState.CONNECTED:
+            await self.disconnection_event()
+            raise WebSocketDisconnect  # client disconnected
+
         try:
-            if self._websocket.client_state != WebSocketState.CONNECTED:
-                raise asyncio.CancelledError  # client disconnected
             return await receiver()
         except WebSocketDisconnect:
             await self.disconnection_event()
+            raise
 
     async def disconnect(self):
         """Disconnect the WebSocket."""
+        if self._websocket.state != WebSocketState.CONNECTED:
+            await self.disconnection_event()
+            return  # already disconnected
+
         try:
-            if self._websocket.state != WebSocketState.CONNECTED:
-                return  # already disconnected
             await self._websocket.close()
         except Exception as e:
             LOGGER.exception(e)
