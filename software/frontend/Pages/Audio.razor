@@ -1,6 +1,7 @@
 @page "/instructor"
 @inject Services.TranscriptionService TranscriptionService
 @inject Services.AudioService AudioService
+@inject Services.ControlService ControlService
 @using MudBlazor
 
 <PageTitle>Instructor</PageTitle>
@@ -33,6 +34,38 @@
         }
     </MudCardActions>
 </MudCard>
+
+@* spacer *@
+<div style="height: 50px;"></div>
+
+@* controller *@
+<MudText Typo="Typo.h3" Class="mb-3">Controller</MudText>
+
+<div class="d-flex">
+    <div class="d-flex flex-column align-center justify-space-between" style="height: 175px;">
+        <MudFab Icon="@Icons.Material.Filled.ArrowDropUp" aria-label="Forward" Size="Size.Large"
+                @onpointerdown="@(async () => await ForwardDown())"
+                @onpointerout="@(async () => await ForwardUp())"
+                @onpointerup="@(async () => await ForwardUp())"/>
+
+        <div class="d-flex justify-space-between" style="width: 175px;">
+            <MudFab Icon="@Icons.Material.Filled.ArrowLeft" aria-label="Left" Size="Size.Large"
+                    @onpointerdown="@(async () => await LeftDown())"
+                    @onpointerout="@(async () => await LeftUp())"
+                    @onpointerup="@(async () => await LeftUp())"/>
+
+            <MudFab Icon="@Icons.Material.Filled.ArrowRight" aria-label="Right" Size="Size.Large"
+                    @onpointerdown="@(async () => await RightDown())"
+                    @onpointerout="@(async () => await RightUp())"
+                    @onpointerup="@(async () => await RightUp())"/>
+        </div>
+
+        <MudFab Icon="@Icons.Material.Filled.ArrowDropDown" aria-label="Backward" Size="Size.Large"
+                @onpointerdown="@(async () => await BackwardDown())"
+                @onpointerout="@(async () => await BackwardUp())"
+                @onpointerup="@(async () => await BackwardUp())"/>
+    </div>
+</div>
 
 
 
@@ -91,5 +124,46 @@
         // update last line with new text
         transcriptions[^1] = text;
         StateHasChanged();
+    }
+
+    private async Task ForwardDown()
+    {
+        await ControlService.DriveForwardAsync();
+    }
+
+    private async Task ForwardUp()
+    {
+        await ControlService.StopForwardAsync();
+
+    }
+
+    private async Task BackwardDown()
+    {
+        await ControlService.DriveBackwardAsync();
+    }
+
+    private async Task BackwardUp()
+    {
+        await ControlService.StopBackwardAsync();
+    }
+
+    private async Task LeftDown()
+    {
+        await ControlService.TurnLeftAsync();
+    }
+
+    private async Task LeftUp()
+    {
+        await ControlService.StopLeftAsync();
+    }
+
+    private async Task RightDown()
+    {
+        await ControlService.TurnRightAsync();
+    }
+
+    private async Task RightUp()
+    {
+        await ControlService.StopRightAsync();
     }
 }

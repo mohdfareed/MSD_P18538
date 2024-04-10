@@ -1,22 +1,53 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
 
-from ..models.movement import Movement
-from ..services.control import motors
+from ..services import control
 
-router = APIRouter()
-
-
-@router.post("/control/", status_code=status.HTTP_200_OK)
-async def move(movement: Movement):
-    try:
-        motors.drive(movement)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid angle or speed")
-
-    return {"message": "Car moved"}
+router = APIRouter(prefix="/control")
 
 
-@router.post("/control/stop", status_code=status.HTTP_200_OK)
-async def stop():
-    motors.drive(Movement(speed=0, angle=0))
-    return {"message": "Car stopped"}
+@router.post("/forward", status_code=status.HTTP_200_OK)
+async def drive_forward():
+    await control.forward(True)
+    return {"message": "Forward"}
+
+
+@router.delete("/forward", status_code=status.HTTP_200_OK)
+async def stop_forward():
+    await control.forward(False)
+    return {"message": "Stop"}
+
+
+@router.post("/backward", status_code=status.HTTP_200_OK)
+async def drive_backward():
+    await control.backward(True)
+    return {"message": "Backward"}
+
+
+@router.delete("/backward", status_code=status.HTTP_200_OK)
+async def stop_backward():
+    await control.backward(False)
+    return {"message": "Stop"}
+
+
+@router.post("/left", status_code=status.HTTP_200_OK)
+async def drive_left():
+    await control.left(True)
+    return {"message": "Left"}
+
+
+@router.delete("/left", status_code=status.HTTP_200_OK)
+async def stop_left():
+    await control.left(False)
+    return {"message": "Stop"}
+
+
+@router.post("/right", status_code=status.HTTP_200_OK)
+async def drive_right():
+    await control.right(True)
+    return {"message": "Right"}
+
+
+@router.delete("/right", status_code=status.HTTP_200_OK)
+async def stop_right():
+    await control.right(False)
+    return {"message": "Stop"}
