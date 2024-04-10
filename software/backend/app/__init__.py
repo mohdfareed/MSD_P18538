@@ -13,6 +13,7 @@ from logging.handlers import RotatingFileHandler
 from rich.logging import RichHandler
 
 LOGGER = logging.getLogger(__name__)
+FRONTEND = os.getenv("FRONTEND", "")
 
 app_dir = os.path.dirname(os.path.realpath(__file__))
 """The application directory."""

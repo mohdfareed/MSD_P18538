@@ -1,14 +1,28 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
-from . import LOGGER
+from . import FRONTEND
 from .controllers import audio, configurator, control, transcription
 
+api_app = FastAPI(title="backend")
+api_app.include_router(control.router)
+api_app.include_router(transcription.router)
+api_app.include_router(configurator.router)
+api_app.include_router(audio.router)
+
 app = FastAPI()
-app.include_router(control.router)
-app.include_router(transcription.router)
-app.include_router(configurator.router)
-app.include_router(audio.router)
+app.mount("/api", api_app, name="api")
+app.mount("/", StaticFiles(directory=FRONTEND, html=True), name="frontend")
+
+
+@app.exception_handler(404)
+async def custom_404_handler(_, __):
+    return FileResponse(os.path.join(FRONTEND, "index.html"))
+
 
 # setup CORS
 app.add_middleware(
@@ -18,9 +32,3 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
-
-
-@app.get("/health")
-async def root():
-    LOGGER.info("Health check passed.")
-    return {"message": "Backend server running"}

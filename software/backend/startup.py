@@ -14,20 +14,21 @@ from fastapi.responses import FileResponse
 
 LOGGER = logging.getLogger(__name__)
 HOST = "0.0.0.0"
-PORT = 9600
-CERTIFICATE_PORT = 9601
-CERTIFICATE_DOMAINS = ["localhost", "*.local"]
-
-# certificate paths
-backend = os.path.dirname(os.path.realpath(__file__))
-software = os.path.dirname(backend)
-cert_path = os.path.join(software, "certificates", "certificate.pem")
-key_path = os.path.join(software, "certificates", "private.key")
-# root CA path
-_root_ca_dir = (
+PORT = 443
+CERTIFICATE_PORT = 9600
+ROOT_CA_DIR = (  # root CA path
     subprocess.check_output("mkcert -CAROOT", shell=True).decode().strip()
 )
-root_ca = os.path.join(_root_ca_dir, "rootCA.pem")
+
+# project paths
+backend = os.path.dirname(os.path.realpath(__file__))
+software = os.path.dirname(backend)
+frontend = os.path.join(software, "frontend")
+
+# certificate paths
+cert_path = os.path.join(software, "certificates", "certificate.pem")
+key_path = os.path.join(software, "certificates", "private.key")
+root_ca = os.path.join(ROOT_CA_DIR, "rootCA.pem")
 
 
 def main(debug=False):
@@ -36,8 +37,18 @@ def main(debug=False):
     Args:
         debug (bool): Whether to start in debug mode and log debug messages.
     """
-
     setup_environment(debug)
+
+    # build frontend
+    subprocess.run(
+        f"dotnet publish -c Release {frontend}",
+        shell=True,
+        check=True,
+        capture_output=True,
+    )
+    LOGGER.info("Frontend built")
+
+    # start certificate server
     cert_thread = threading.Thread(target=start_cert_server)
     cert_thread.start()
 
@@ -64,10 +75,15 @@ def main(debug=False):
 def setup_environment(debug):
     """Set up the environment and logging."""
 
+    frontend_build = os.path.join(
+        frontend, "bin", "Release", "net6.0", "publish", "wwwroot"
+    )
+
     load_dotenv()
+    os.environ["FRONTEND"] = frontend_build
     os.environ["DEBUG"] = str(debug)
     os.environ["NOLOG"] = str(1)  # don't log on import
-    import app
+    import app  # pylint: disable=import-outside-toplevel
 
     os.unsetenv("NOLOG")
     LOGGER.info("Logging to files at: %s/", os.path.dirname(app.logging_file))
