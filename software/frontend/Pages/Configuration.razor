@@ -21,6 +21,17 @@
             </MudTooltip>
         </MudStack>
 
+        <div style="height: 10px;"></div>
+
+        @* Single confing setting *@
+        <MudStack Row="true" AlignItems="AlignItems.End">
+            <MudTextField Label="OpenAI API Key" @bind-Value="config.OpenaiApiKey"/>
+            @* Config info *@
+            <MudTooltip Text="API key retreived from OpenAI. Required to use the Whisper transcription engine.">
+                <MudIcon Icon="@Icons.Material.Filled.Info" />
+            </MudTooltip>
+        </MudStack>
+
     </MudCardContent>
 
     <MudCardActions>

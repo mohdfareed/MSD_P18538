@@ -19,4 +19,3 @@ RPi.GPIO # gpiozero dependency
 
 # misc
 rich # logging formatting
-python-dotenv # environment variables
