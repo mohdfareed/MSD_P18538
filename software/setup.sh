@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 
-# This is the script primarily meant for setting up a new RPi
-# It sets up the environment for the backend (python) and frontend (.net)
-repo="https://github.com/BrianMonclus/MSD_P18538.git" # The git repository
+# This is the script meant for setting up a new RPi
 app_dir="$HOME/MSD_P18538" # The directory where the app is located
 env="$app_dir/software/environment.sh" # The environment file
-cert_dir="$app_dir/software/backend/data" # The directory for certificates
-req_file="$app_dir/software/backend/requirements.txt" # The requirements file
-service_file="$app_dir/software/software.service" # The service file
+backend_env="$app_dir/software/backend/.env" # The backend environment file
 log_file="$HOME/setup.log" # The log file
 
 # Ask user for api key if it doesn't exist
@@ -18,19 +14,20 @@ if [ -z "$OPENAI_API_KEY" ]; then
 fi
 
 # Update machine and setup environment
-sudo apt update && sudo apt upgrade -y | tee -a $log_file
+sudo apt update | tee -a $log_file && sudo apt upgrade -y | tee -a $log_file
 # Install dependencies for project
 sudo apt install tmux git -y | tee -a $log_file
 
 # Clone the repository if it doesn't exist
 if [ ! -d "$app_dir" ]; then
+  repo="https://github.com/BrianMonclus/MSD_P18538.git" # The git repository
   git clone $repo $app_dir | tee -a $log_file
 fi
 if [ -z "$(grep 'source $env' $HOME/.bashrc)" ]; then
   echo "source $env" >> $HOME/.bashrc
 fi
-if [ -z "$(grep 'export OPENAI_API_KEY' $HOME/.bashrc)" ]; then
-  echo "export OPEN_AI_API_KEY=$OPENAI_API_KEY" >> $HOME/.bashrc
+if [ -z "$(grep 'OPENAI_API_KEY' $backend_env)" ]; then
+  echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> $backend_env
 fi
 echo ".bashrc setup complete." | tee -a $log_file
 
@@ -59,18 +56,21 @@ if [ ! -d "$HOME/.pyenv" ]; then
   echo "Installed python 3.12." | tee -a $log_file
 fi
 source $env
-cd $app_dir
 echo "Installed pyenv." | tee -a $log_file
 
 # Install python 3.12 and set it as the active version
 if [ -z "$(pyenv versions | grep 3.12)" ]; then
   pyenv install 3.12 | tee -a $log_file
 fi
-pyenv local 3.12 | tee -a $log_file          # Set python 3.12 as local version
+pyenv local 3.12 | tee -a $log_file # Set python 3.12 as local version
+
+# Setup python environment
+cd $app_dir
+req_file="$app_dir/software/backend/requirements.txt" # The requirements file
 python -m venv .venv | tee -a $log_file      # Create virtual environment
-source .venv/bin/activate | tee -a $log_file # Activate virtual environment
+source .venv/bin/activate                    # Activate virtual environment
 pip install -r $req_file | tee -a $log_file  # Install dependencies
-deactivate | tee -a $log_file                # Deactivate virtual environment
+deactivate                                   # Deactivate virtual environment
 echo "Python environment setup complete." | tee -a $log_file
 
 # Setup .net environment
@@ -107,8 +107,8 @@ sudo mkcert -install | tee -a $log_file
 echo "mkcert installed." | tee -a $log_file
 
 # Generate certificates
-cd $cert_dir
-mkcert -cert-file certificate.pem -key-file private.key \
+cert_dir="$app_dir/software/backend/data" # The directory of certificates
+cd $cert_dir && mkcert -cert-file certificate.pem -key-file private.key \
   'localhost' '*.local' '*.student.rit.edu' | tee -a $log_file
 sys_cert_path="/usr/local/share/ca-certificates/MSD_P18538.crt"
 root_cert="$(mkcert -CAROOT)/rootCA.pem"
@@ -120,11 +120,15 @@ echo "Certificates generated." | tee -a $log_file
 # Setup services
 # =============================================================================
 
-sudo cp $service_file /etc/systemd/system/software.service # Install services
+sudo chmod +x $app_dir/software/startup.sh | tee -a $log_file
+service_file="$app_dir/software/software.service" # The service file
+
+# Install services
+sudo cp $service_file /etc/systemd/system/software.service | tee -a $log_file
 sudo systemctl daemon-reload | tee -a $log_file # Reload service files
-sudo systemctl enable software.service | tee -a $log_file # Start on boot
+sudo systemctl enable software.service | tee -a $log_file # Start service
 sudo systemctl start software.service | tee -a $log_file # Start the service
 sudo systemctl status software.service | tee -a $log_file # Check status
-sudo chmod +x $app_dir/software/startup.sh | tee -a $log_file
 echo "Services setup complete." | tee -a $log_file
+
 sudo reboot # Restart the system to apply some changes

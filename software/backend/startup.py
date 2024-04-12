@@ -1,4 +1,4 @@
-#!../../.venv/bin/python3
+#!/usr/bin/env python
 
 import logging
 import os
@@ -23,6 +23,7 @@ ROOT_CA_DIR = (  # root CA path
 # project paths
 backend = os.path.dirname(os.path.realpath(__file__))
 frontend = os.path.join(os.path.dirname(backend), "frontend")
+env = os.path.join(backend, ".env")
 
 # certificate paths
 cert_path = os.path.join(backend, "data", "certificate.pem")
@@ -78,7 +79,7 @@ def setup_environment(debug):
         frontend, "bin", "Release", "net6.0", "publish", "wwwroot"
     )
 
-    load_dotenv()
+    load_dotenv(env)
     os.environ["FRONTEND"] = frontend_build
     os.environ["DEBUG"] = str(debug)
     os.environ["NOLOG"] = str(1)  # don't log on import
