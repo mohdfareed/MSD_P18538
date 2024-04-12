@@ -15,7 +15,7 @@ pydub # audio file manipulation
 
 # control
 gpiozero # raspberry pi gpio interface library
-pygame # device inputs, sound, and graphics
+RPi.GPIO # gpiozero dependency
 
 # misc
 rich # logging formatting

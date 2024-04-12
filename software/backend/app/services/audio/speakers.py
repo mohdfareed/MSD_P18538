@@ -7,7 +7,7 @@ service to listen to audio data and play it.
 
 import wave
 
-import pyaudio
+import pyaudio  # type: ignore
 
 from ...models.microphone import MicrophoneConfig
 from ..events import Event, EventHandler
@@ -15,6 +15,10 @@ from . import LOGGER
 
 LOCAL_AUDIO_SOURCE = pyaudio.PyAudio()
 """The local audio source."""
+DEVICE_INDEX = int(
+    LOCAL_AUDIO_SOURCE.get_default_output_device_info()["index"]
+)
+"""The default audio device index."""
 
 
 async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
@@ -38,6 +42,7 @@ async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
         channels=mic_config.num_channels,
         rate=mic_config.sample_rate,
         output=True,
+        output_device_index=DEVICE_INDEX,
     )
 
     def write_audio(data: bytes):
@@ -61,7 +66,7 @@ async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
             LOGGER.debug("Speaker stopped")
 
     # create cancellation token
-    cancellation_event = Event()
+    cancellation_event: Event[...] = Event()
     cancellation_handler = EventHandler(stop_speaker, one_shot=True)
     await cancellation_event.subscribe(cancellation_handler)
     return cancellation_event
@@ -102,7 +107,7 @@ async def start_file_speaker(
         LOGGER.debug("Speaker stopped")
 
     # create cancellation token
-    cancellation_event = Event()
+    cancellation_event: Event[...] = Event()
     cancellation_handler = EventHandler(stop_speaker, one_shot=True)
     await cancellation_event.subscribe(cancellation_handler)
     return cancellation_event

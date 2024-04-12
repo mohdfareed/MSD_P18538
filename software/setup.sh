@@ -44,10 +44,6 @@ sudo apt install build-essential gdb lcov pkg-config \
 # Install dependencies for the backend
 sudo apt install portaudio19-dev -y | tee -a $log_file # Audio input/output
 sudo apt install ffmpeg -y | tee -a $log_file          # Audio decoding
-# sudo apt install RPi.GPIO -y | tee -a $log_file        # GPIO pins
-# sudo apt install pigpio -y | tee -a $log_file          # PWM pins
-sudo apt install lgpio -y | tee -a $log_file           # PWM pins
-# sudo apt install jackd2 -y | tee -a $log_file          # Audio server
 echo "Backend dependencies installed." | tee -a $log_file
 
 # Install python environment manager
