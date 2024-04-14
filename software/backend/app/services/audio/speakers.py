@@ -9,16 +9,14 @@ import wave
 
 import pyaudio  # type: ignore
 
+from ...models.config import Config
 from ...models.microphone import MicrophoneConfig
+from ..configurator import config, register_validator
 from ..events import Event, EventHandler
 from . import LOGGER
 
 LOCAL_AUDIO_SOURCE = pyaudio.PyAudio()
 """The local audio source."""
-DEVICE_INDEX = int(
-    LOCAL_AUDIO_SOURCE.get_default_output_device_info()["index"]
-)
-"""The default audio device index."""
 
 
 async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
@@ -34,6 +32,7 @@ async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
             capture event, the reported microphone configuration, and the
             cancellation token to stop listening.
     """
+    global config
 
     stream = LOCAL_AUDIO_SOURCE.open(
         format=LOCAL_AUDIO_SOURCE.get_format_from_width(
@@ -42,7 +41,7 @@ async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
         channels=mic_config.num_channels,
         rate=mic_config.sample_rate,
         output=True,
-        output_device_index=DEVICE_INDEX,
+        output_device_index=config.audio_device,
     )
 
     def write_audio(data: bytes):
@@ -52,7 +51,7 @@ async def start_speaker(mic_config: MicrophoneConfig, mic_event: Event[bytes]):
             pass  # disconnected
 
     # start listening to microphone
-    handler = EventHandler(write_audio, sequential=True, timeout=1)
+    handler = EventHandler(write_audio, sequential=True, timeout=2.5)
     await mic_event.subscribe(handler)
 
     async def stop_speaker():
@@ -111,3 +110,26 @@ async def start_file_speaker(
     cancellation_handler = EventHandler(stop_speaker, one_shot=True)
     await cancellation_event.subscribe(cancellation_handler)
     return cancellation_event
+
+
+# CONFIGURATION ###############################################################
+
+
+def get_audio_devices() -> dict[int, str]:
+    devices = {}
+    for i in range(LOCAL_AUDIO_SOURCE.get_device_count()):
+        device_info = LOCAL_AUDIO_SOURCE.get_device_info_by_index(i)
+        if device_info.get("maxOutputChannels") != 0:
+            devices[i] = device_info["name"]
+    return devices
+
+
+def validate_audio_device(config: Config):
+    device = config.audio_device
+
+    device_info = LOCAL_AUDIO_SOURCE.get_device_info_by_index(device)
+    if device_info.get("maxOutputChannels") == 0:
+        raise ValueError(f"Invalid audio device: {device}")
+
+
+register_validator(validate_audio_device)

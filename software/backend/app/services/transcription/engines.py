@@ -14,7 +14,7 @@ import openai.error
 import speech_recognition as sr  # type: ignore
 
 from ...models.config import Config
-from ..configurator import config, register_validator
+from ..configurator import register_validator
 
 OPENAI_API_KEY = ""
 """The OpenAI API key."""
@@ -33,7 +33,7 @@ async def recognize(audio_data: sr.AudioData) -> str:
     Returns:
         str: The transcription of the audio.
     """
-    global recognizer, config, active_engine
+    global recognizer, active_engine
 
     try:
         return await asyncio.to_thread(active_engine, audio_data)
