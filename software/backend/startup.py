@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import logging
 import os
@@ -7,7 +7,6 @@ import threading
 from contextlib import asynccontextmanager
 
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -78,7 +77,6 @@ def setup_environment(debug):
         frontend, "bin", "Release", "net6.0", "publish", "wwwroot"
     )
 
-    load_dotenv()
     os.environ["FRONTEND"] = frontend_build
     os.environ["DEBUG"] = str(debug)
     os.environ["NOLOG"] = str(1)  # don't log on import

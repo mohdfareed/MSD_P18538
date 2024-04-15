@@ -2,6 +2,8 @@
 @inject Services.TranscriptionService TranscriptionService
 @inject Services.AudioService AudioService
 @inject Services.ControlService ControlService
+@inject Services.ConfigurationService ConfigurationService
+@inject ISnackbar Snackbar
 @using MudBlazor
 
 <PageTitle>Instructor</PageTitle>
@@ -78,6 +80,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // verify api key exists if whisper is selected
+        var config = await ConfigurationService.GetConfigAsync();
+        if (config.TranscriptionEngine == "whisper" && string.IsNullOrWhiteSpace(config.OpenaiApiKey))
+        {
+            Snackbar.Add("OpenAI API key is required for Whisper transcription engine.", Severity.Error);
+        }
         await StartTranscription();
     }
 

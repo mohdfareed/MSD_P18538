@@ -6,14 +6,23 @@ methods for converting audio data to text.
 """
 
 import asyncio
+import os
+from collections.abc import Callable
 
-import speech_recognition as sr
+import openai
+import openai.error
+import speech_recognition as sr  # type: ignore
 
 from ...models.config import Config
-from ..configurator import config, register_validator
+from ..configurator import register_validator
+from . import LOGGER
 
+OPENAI_API_KEY = ""
+"""The OpenAI API key."""
 recognizer = sr.Recognizer()
 """The speech recognition engine."""
+active_engine: Callable[[sr.AudioData], str]
+"""The active recognition engine."""
 
 
 async def recognize(audio_data: sr.AudioData) -> str:
@@ -25,7 +34,7 @@ async def recognize(audio_data: sr.AudioData) -> str:
     Returns:
         str: The transcription of the audio.
     """
-    global recognizer, config, active_engine
+    global recognizer, active_engine
 
     try:
         return await asyncio.to_thread(active_engine, audio_data)
@@ -61,18 +70,30 @@ class UnrecognizedAudioError(RecognitionEngineError):
 
 # CONFIGURATION ###############################################################
 
-engines = {
-    "google": _google_recognize,
-    "whisper": _whisper_recognize,
-}
-
 
 def validate_engine(config: Config):
     global active_engine
+    engines = {
+        "google": _google_recognize,
+        "whisper": _whisper_recognize,
+    }
+
     try:
         active_engine = engines[config.transcription_engine]
     except KeyError:
         raise ValueError(f"Invalid engine: {config.transcription_engine}")
 
 
+def validate_api_key(config: Config):
+    global OPENAI_API_KEY, recognizer
+    openai.api_key = config.openai_api_key
+    os.environ["OPENAI_API_KEY"] = config.openai_api_key
+
+    try:
+        openai.Model.list()
+    except openai.error.AuthenticationError:
+        LOGGER.error("Invalid OpenAI API key")
+
+
 register_validator(validate_engine)
+register_validator(validate_api_key)

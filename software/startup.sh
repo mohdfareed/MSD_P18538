@@ -1,25 +1,19 @@
 #!/usr/bin/env bash
 
-# cd to path of this script
-cd "$(dirname "$0")"
+work_dir="$HOME/MSD_P18538"
+SESSION_NAME="MSD_P18538"  # name of the tmux session
+SCRIPT="$work_dir/software/backend/startup.py" # startup script
+PYTHON="$work_dir/.venv/bin/python" # virtual environment
+chmod +x $SCRIPT
 
-SESSION_NAME="software"             # name of the tmux session
-SCRIPT="./backend/startup.py"  # startup script
-VENV="source ../.venv/bin/activate" # activate virtual environment
-
+# create a new tmux session and run the startup script
 tmux kill-session -t $SESSION_NAME 2> /dev/null # delete previous session
 tmux new-session -d -s $SESSION_NAME            # create a new session
+tmux send-keys -t $SESSION_NAME "sudo $PYTHON $SCRIPT" C-m   # start app
 
-# Load the shell environment
-tmux send-keys -t $SESSION_NAME "source ./environment.sh" C-m # Load env
-tmux send-keys -t $SESSION_NAME "$VENV" C-m                   # activate venv
-tmux send-keys -t $SESSION_NAME "$SCRIPT" C-m                 # start app
-
-if ! command -v chromium-browser &> /dev/null; then
-  echo "chromium-browser not found"
-  exit 0
+if command -v chromium-browser &> /dev/null; then
+  ip=$(hostname -I | awk '{print $1}')
+  chromium-browser --app="https://$ip" 2> /dev/null &
+else
+  echo "chromium-browser not found, cannot open UI."
 fi
-
-# Open web browser to the frontend
-ip=$(hostname -I | awk '{print $1}')
-chromium-browser --app=https://$ip 2> /dev/null &

@@ -1,10 +1,17 @@
 [Unit]
-Description=Software Service
+Description=MSD-P18538 Software Service
+After=network-online.target sound.target
+Wants=network-online.target
+Requires=multi-user.target
 
 [Service]
-Type=simple
+Type=oneshot
+User=pi
+Environment="DISPLAY=:0"
+Environment="HOME=/home/pi"
+ExecStart=/home/pi/MSD_P18538/software/startup.sh
+RemainAfterExit=yes
 Restart=on-failure
-ExecStart=/bin/bash -c '/home/pi/MSD_P18538/software/startup.sh'
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

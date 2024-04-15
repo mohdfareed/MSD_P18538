@@ -12,7 +12,5 @@ subscribed speakers.
 
 import logging
 
-import pyaudio
-
 LOGGER = logging.getLogger(__name__)
 """Audio service logger."""
