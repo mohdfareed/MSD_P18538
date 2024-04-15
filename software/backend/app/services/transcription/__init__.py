@@ -30,6 +30,6 @@ https://github.com/davabase/whisper_real_time/blob/master/transcribe_demo.py
 import logging
 
 LOGGER = logging.getLogger(__name__)
-"""Audio module logger."""
+"""Transcription module logger."""
 
 from .core import event, start

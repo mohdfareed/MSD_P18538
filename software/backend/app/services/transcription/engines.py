@@ -15,6 +15,7 @@ import speech_recognition as sr  # type: ignore
 
 from ...models.config import Config
 from ..configurator import register_validator
+from . import LOGGER
 
 OPENAI_API_KEY = ""
 """The OpenAI API key."""
@@ -85,12 +86,13 @@ def validate_engine(config: Config):
 
 def validate_api_key(config: Config):
     global OPENAI_API_KEY, recognizer
+    openai.api_key = config.openai_api_key
     os.environ["OPENAI_API_KEY"] = config.openai_api_key
 
     try:
         openai.Model.list()
-    except openai.error.AuthenticationError as e:
-        raise ValueError("Invalid OpenAI API key") from e
+    except openai.error.AuthenticationError:
+        LOGGER.error("Invalid OpenAI API key")
 
 
 register_validator(validate_engine)
