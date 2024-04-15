@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from ..models.config import Config
 from ..services import configurator
+from ..services.audio import speakers
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,3 +33,10 @@ async def set_configs(new_config: Config):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
     return {"message": "Config updated successfully"}
+
+
+@router.get("/config/audio_devices")
+async def get_audio_devices():
+    devices = speakers.get_audio_devices()
+    LOGGER.debug("Sending audio devices: %s", devices)
+    return devices

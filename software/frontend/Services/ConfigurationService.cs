@@ -57,4 +57,21 @@ public class ConfigurationService
             throw;
         }
     }
+
+    public async Task<Dictionary<int, string>> GetAudioDevicesAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"{_http_route}/audio_devices");
+            response.EnsureSuccessStatusCode();
+            var responseString = await response.Content.ReadAsStringAsync();
+            var audioDevices = JsonSerializer.Deserialize<Dictionary<int, string>>(responseString);
+            return audioDevices!;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to get audio devices");
+            throw;
+        }
+    }
 }

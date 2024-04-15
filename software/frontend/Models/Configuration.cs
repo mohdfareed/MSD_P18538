@@ -9,4 +9,7 @@ public class Config
 
     [JsonPropertyName("openai_api_key")]
     public string OpenaiApiKey { get; set; } = null!;
+
+    [JsonPropertyName("audio_device")]
+    public int AudioDevice { get; set; }
 }

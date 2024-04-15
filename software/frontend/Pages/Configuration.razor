@@ -8,7 +8,7 @@
 <MudCard>
     <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
 
-        @* Single confing setting *@
+        @* Transcription Engine *@
         <MudStack Row="true" AlignItems="AlignItems.End">
             @* Example of drop-down setting *@
             <MudSelect Label="Transcription Engine" @bind-Value="config.TranscriptionEngine">
@@ -23,7 +23,7 @@
 
         <div style="height: 10px;"></div>
 
-        @* Single confing setting *@
+        @* OpenAI API Key *@
         <MudStack Row="true" AlignItems="AlignItems.End">
             <MudTextField Label="OpenAI API Key" @bind-Value="config.OpenaiApiKey"/>
             @* Config info *@
@@ -32,8 +32,23 @@
             </MudTooltip>
         </MudStack>
 
-    </MudCardContent>
+        <div style="height: 10px;"></div>
 
+        @* Audio Output Device *@
+        <MudStack Row="true" AlignItems="AlignItems.End">
+            <MudSelect Label="Audio Output Device" @bind-Value="config.AudioDevice">
+                @foreach (var device in audioDevices)
+                {
+                    <MudSelectItem T="int" Value="@device.Key">@device.Value</MudSelectItem>
+                }
+            </MudSelect>
+            @* Config info *@
+            <MudTooltip Text="Audio output device used for playing audio data.">
+                <MudIcon Icon="@Icons.Material.Filled.Info" />
+            </MudTooltip>
+        </MudStack>
+
+    </MudCardContent>
     <MudCardActions>
         <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ApplyChanges">Apply Changes</MudButton>
         <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadConfig">Reset</MudButton>
@@ -44,10 +59,12 @@
 
 @code {
     private Models.Config config = new();
+    private Dictionary<int, string> audioDevices = new();
 
     private async Task LoadConfig()
     {
         config = await ConfigurationService.GetConfigAsync();
+        StateHasChanged();
     }
 
     private async Task ApplyChanges()
@@ -68,6 +85,7 @@
 
     override protected async Task OnInitializedAsync()
     {
+        audioDevices = await ConfigurationService.GetAudioDevicesAsync();
         await LoadConfig();
     }
 }
