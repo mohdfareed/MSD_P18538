@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-work_dir="$HOME/MSD_P18538"
-SESSION_NAME="MSD_P18538"  # name of the tmux session
+work_dir="$HOME/msd-p18538"
+SESSION_NAME="MSD-P18538"  # name of the tmux session
 SCRIPT="$work_dir/software/backend/startup.py" # startup script
 PYTHON="$work_dir/.venv/bin/python" # virtual environment
 chmod +x $SCRIPT

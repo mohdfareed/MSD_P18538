@@ -1,6 +1,6 @@
-# MSD_P18538
+# MSD P18538 - Interactive Fire Safety Training Robot
 
-Interactive Training Robot for Fire Safety
+Interactive Training Robot for Fire Safety. This repository contains the software for the Raspberry Pi that controls the robot.
 
 
 ## How to setup a new RPi device
@@ -22,7 +22,7 @@ Interactive Training Robot for Fire Safety
 4. Open a terminal window and run the following:
 
 ```sh
-export GITHUB_LINK=https://raw.githubusercontent.com/BrianMonclus/MSD_P18538/main/software/setup.sh
+export GITHUB_LINK=https://raw.githubusercontent.com/mohdfareed/msd-p18538/main/software/setup.sh
 curl $GITHUB_LINK | bash
 ```
 

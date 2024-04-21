@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # This is the script meant for setting up a new RPi
-app_dir="$HOME/MSD_P18538" # The directory where the app is located
+app_dir="$HOME/msd-p18538" # The directory where the app is located
 env="$app_dir/software/environment.sh" # The environment file
 backend_env="$app_dir/software/backend/.env" # The backend environment file
 log_file="$HOME/setup.log" # The log file
@@ -20,7 +20,7 @@ sudo apt install tmux git -y | tee -a $log_file
 
 # Clone the repository if it doesn't exist
 if [ ! -d "$app_dir" ]; then
-  repo="https://github.com/BrianMonclus/MSD_P18538.git" # The git repository
+  repo="https://github.com/BrianMonclus/msd-p18538.git" # The git repository
   git clone $repo $app_dir | tee -a $log_file
 fi
 if [ -z "$(grep 'source $env' $HOME/.bashrc)" ]; then
@@ -106,7 +106,7 @@ echo "mkcert installed." | tee -a $log_file
 cert_dir="$app_dir/software/backend/data" # The directory of certificates
 cd $cert_dir && mkcert -cert-file certificate.pem -key-file private.key \
   'localhost' '*.local' '*.student.rit.edu' | tee -a $log_file
-sys_cert_path="/usr/local/share/ca-certificates/MSD_P18538.crt"
+sys_cert_path="/usr/local/share/ca-certificates/msd-p18538.crt"
 root_cert="$(mkcert -CAROOT)/rootCA.pem"
 sudo cp certificate.pem $sys_cert_path
 sudo update-ca-certificates | tee -a $log_file
