@@ -9,7 +9,7 @@ Type=oneshot
 User=pi
 Environment="DISPLAY=:0"
 Environment="HOME=/home/pi"
-ExecStart=/home/pi/MSD_P18538/software/startup.sh
+ExecStart=/home/pi/msd-p18538/software/startup.sh
 RemainAfterExit=yes
 Restart=on-failure
 

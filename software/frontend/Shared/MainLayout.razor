@@ -27,16 +27,16 @@
         }
 
         @* https certificate link *@
-        <MudIconButton Icon="@Icons.Material.Filled.Shield" Color="Color.Inherit"
-            Href="@GetCertificateUrl()" Target="_blank" />
+        <MudIconButton Icon="@Icons.Material.Filled.Shield" Color="Color.Inherit" Href="@GetCertificateUrl()"
+            Target="_blank" />
 
         @* github link *@
         <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
-            Href="https://github.com/BrianMonclus/MSD_P18538" Target="_blank" />
+            Href="https://github.com/mohdfareed/msd-p18538" Target="_blank" />
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" Elevation="1">
         <MudDrawerHeader>
-            <img src="@_logo" alt="RIT collapsed logo" style="width: 100%; height: auto;"/>
+            <img src="@_logo" alt="RIT collapsed logo" style="width: 100%; height: auto;" />
         </MudDrawerHeader>
         <NavMenu />
     </MudDrawer>

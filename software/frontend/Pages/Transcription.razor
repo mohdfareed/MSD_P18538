@@ -6,34 +6,34 @@
 
 <PageTitle>Student</PageTitle>
 <MudText Typo="Typo.h3" Class="mb-3">Live Transcript</MudText>
-<MudCard>
-    <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
-        <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>
-    </MudCardContent>
-    <MudCardActions>
-        @if (isTranscribing)
-        {
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
-                OnClick="@(transcriptionCTS.Cancel)">Transcribing</MudButton>
-        }
-        else
-        {
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Error"
-                OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
-        }
-    </MudCardActions>
-</MudCard>
 
-@* spacer *@
-<div style="height: 50px;"></div>
+<MudStack Class="d-flex flex-wrap" Row="true" AlignItems="AlignItems.Start">
+    <div class="d-flex flex-column flex-grow-1 align-start">
+        <MudCard Style="width: 100%; min-width: 300px">
+            <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 450px; overflow-y: scroll">
+                <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                @if (isTranscribing)
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
+                        OnClick="@(transcriptionCTS.Cancel)">Transcribing</MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Error"
+                        OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
+                }
+            </MudCardActions>
+        </MudCard>
+    </div>
 
-<MudExpansionPanels>
-    <MudExpansionPanel Text="QR Code">
-        <MudImage Fluid="true" Src="@GetQrCodeUrl()" Alt="QR Code"
-        Width="540" Height="540" Elevation="25" Class="square"/>
-    </MudExpansionPanel>
-</MudExpansionPanels>
-
+    <MudExpansionPanels Style="width: 350px">
+        <MudExpansionPanel Text="QR Code">
+            <MudImage Fluid="true" Src="@GetQrCodeUrl()" Alt="QR Code" Elevation="25" Class="square" />
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+</MudStack>
 
 @code {
     private List<string> transcriptions = new List<string> { "" };
@@ -51,7 +51,8 @@
         isTranscribing = true;
 
         transcriptionCTS = new CancellationTokenSource();
-        transcriptionCTS.Token.Register(() => {
+        transcriptionCTS.Token.Register(() =>
+        {
             isTranscribing = false; StateHasChanged();
         });
 
