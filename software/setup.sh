@@ -124,7 +124,7 @@ current_cron=$(mktemp) # Temporary file to store current cron jobs
 
 # Set up CRON job to start the app on boot
 crontab -l > "$current_cron" 2>/dev/null || true
-if [ -z "$(grep "$cron_job" current_cron)" ]; then
+if [ -z "$(grep "$cron_job" $current_cron)" ]; then
   echo "$cron_job" >> "$current_cron"
   crontab "$current_cron" 2>&1 | tee -a $log_file
   echo "CRON job setup complete." | tee -a $log_file
