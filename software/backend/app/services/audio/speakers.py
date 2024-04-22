@@ -127,9 +127,15 @@ def get_audio_devices() -> dict[int, str]:
 def validate_audio_device(config: Config):
     device = config.audio_device
 
-    device_info = LOCAL_AUDIO_SOURCE.get_device_info_by_index(device)
-    if device_info.get("maxOutputChannels") == 0:
-        raise ValueError(f"Invalid audio device: {device}")
+    try:
+        device_info = LOCAL_AUDIO_SOURCE.get_device_info_by_index(device)
+        if device_info.get("maxOutputChannels") == 0:
+            raise ValueError(f"Invalid audio device: {device}")
+    except Exception as e:
+        config.audio_device = int(
+            pyaudio.PyAudio().get_default_output_device_info()["index"]
+        )
+        raise ValueError(f"Invalid audio device: {device}") from e
 
 
 register_validator(validate_audio_device)
