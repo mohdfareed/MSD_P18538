@@ -7,67 +7,67 @@
 @using MudBlazor
 
 <PageTitle>Instructor</PageTitle>
-<MudText Typo="Typo.h3" Class="mb-3">Live Transcript</MudText>
-<MudCard>
-    <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
-        <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>
-    </MudCardContent>
-    <MudCardActions>
-        @if (isTranscribing)
-        {
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
-                OnClick="@(transcriptionCTS.Cancel)">Transcribing</MudButton>
-        }
-        else
-        {
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Error"
-                OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
-        }
 
-        @if (isRecording)
-        {
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Warning"
-                OnClick="@(recordingCTS.Cancel)">Recording</MudButton>
-        }
-        else
-        {
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Error"
-                OnClick="@(async () => await StartRecording())">Not recording</MudButton>
-        }
-    </MudCardActions>
-</MudCard>
+<MudStack Class="d-flex flex-wrap" Row="true" AlignItems="AlignItems.Start">
+    <div class="d-flex flex-column flex-grow-1 align-start">
+        <MudText Typo="Typo.h3" Class="mb-3">Live Transcript</MudText>
+        <MudCard Style="width: 100%">
+            <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 300px; overflow-y: scroll;">
+                <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>
+            </MudCardContent>
+            <MudCardActions Class="d-flex flex-wrap">
+                @if (isTranscribing)
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
+                        OnClick="@(transcriptionCTS.Cancel)">Transcribing</MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Error"
+                        OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
+                }
 
-@* spacer *@
-<div style="height: 50px;"></div>
-
-@* controller *@
-<MudText Typo="Typo.h3" Class="mb-3">Controller</MudText>
-
-<div class="d-flex">
-    <div class="d-flex flex-column align-center justify-space-between" style="height: 175px;">
-        <MudFab Icon="@Icons.Material.Filled.ArrowDropUp" aria-label="Forward" Size="Size.Large"
-                @onpointerdown="@(async () => await ForwardDown())"
-                @onpointerout="@(async () => await ForwardUp())"
-                @onpointerup="@(async () => await ForwardUp())"/>
-
-        <div class="d-flex justify-space-between" style="width: 175px;">
-            <MudFab Icon="@Icons.Material.Filled.ArrowLeft" aria-label="Left" Size="Size.Large"
-                    @onpointerdown="@(async () => await LeftDown())"
-                    @onpointerout="@(async () => await LeftUp())"
-                    @onpointerup="@(async () => await LeftUp())"/>
-
-            <MudFab Icon="@Icons.Material.Filled.ArrowRight" aria-label="Right" Size="Size.Large"
-                    @onpointerdown="@(async () => await RightDown())"
-                    @onpointerout="@(async () => await RightUp())"
-                    @onpointerup="@(async () => await RightUp())"/>
-        </div>
-
-        <MudFab Icon="@Icons.Material.Filled.ArrowDropDown" aria-label="Backward" Size="Size.Large"
-                @onpointerdown="@(async () => await BackwardDown())"
-                @onpointerout="@(async () => await BackwardUp())"
-                @onpointerup="@(async () => await BackwardUp())"/>
+                @if (isRecording)
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Warning"
+                        OnClick="@(recordingCTS.Cancel)">Recording</MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Mic" Color="Color.Error"
+                        OnClick="@(async () => await StartRecording())">Not recording</MudButton>
+                }
+            </MudCardActions>
+        </MudCard>
     </div>
-</div>
+
+    @* controller *@
+    <div class="d-flex flex-column align-center">
+        <MudText Typo="Typo.h3" Class="mb-3">Controller</MudText>
+        <div class="d-flex">
+            <div class="d-flex flex-column align-center justify-space-between" style="height: 175px;">
+                <MudFab StartIcon="@Icons.Material.Filled.ArrowDropUp" aria-label="Forward" Size="Size.Large"
+                    @onpointerdown="@(async () => await ForwardDown())" @onpointerout="@(async () => await ForwardUp())"
+                    @onpointerup="@(async () => await ForwardUp())" />
+
+                <div class="d-flex justify-space-between" style="width: 175px;">
+                    <MudFab StartIcon="@Icons.Material.Filled.ArrowLeft" aria-label="Left" Size="Size.Large"
+                        @onpointerdown="@(async () => await LeftDown())" @onpointerout="@(async () => await LeftUp())"
+                        @onpointerup="@(async () => await LeftUp())" />
+
+                    <MudFab StartIcon="@Icons.Material.Filled.ArrowRight" aria-label="Right" Size="Size.Large"
+                        @onpointerdown="@(async () => await RightDown())" @onpointerout="@(async () => await RightUp())"
+                        @onpointerup="@(async () => await RightUp())" />
+                </div>
+
+                <MudFab StartIcon="@Icons.Material.Filled.ArrowDropDown" aria-label="Backward" Size="Size.Large"
+                    @onpointerdown="@(async () => await BackwardDown())"
+                    @onpointerout="@(async () => await BackwardUp())"
+                    @onpointerup="@(async () => await BackwardUp())" />
+            </div>
+        </div>
+    </div>
+</MudStack>
 
 
 
@@ -95,7 +95,8 @@
         isTranscribing = true;
 
         transcriptionCTS = new CancellationTokenSource();
-        transcriptionCTS.Token.Register(() => {
+        transcriptionCTS.Token.Register(() =>
+        {
             isTranscribing = false; StateHasChanged();
         });
 
@@ -111,7 +112,8 @@
         isRecording = true;
 
         recordingCTS = new CancellationTokenSource();
-        recordingCTS.Token.Register(() => {
+        recordingCTS.Token.Register(() =>
+        {
             isRecording = false; StateHasChanged();
         });
 

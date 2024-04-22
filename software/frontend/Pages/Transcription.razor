@@ -8,23 +8,25 @@
 <MudText Typo="Typo.h3" Class="mb-3">Live Transcript</MudText>
 
 <MudStack Class="d-flex flex-wrap" Row="true" AlignItems="AlignItems.Start">
-    <MudCard Class="flex-grow-1" Style="width: 450px">
-        <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 450px; overflow-y: scroll">
-            <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>
-        </MudCardContent>
-        <MudCardActions>
-            @if (isTranscribing)
-            {
-                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
-                    OnClick="@(transcriptionCTS.Cancel)">Transcribing</MudButton>
-            }
-            else
-            {
-                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Error"
-                    OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
-            }
-        </MudCardActions>
-    </MudCard>
+    <div class="d-flex flex-column flex-grow-1 align-start">
+        <MudCard Style="width: 100%; min-width: 300px">
+            <MudCardContent Style="display: flex; flex-direction: column-reverse; height: 450px; overflow-y: scroll">
+                <MudText Typo="Typo.h4">@(string.Join(' ', transcriptions))</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                @if (isTranscribing)
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Success"
+                        OnClick="@(transcriptionCTS.Cancel)">Transcribing</MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Adjust" Color="Color.Error"
+                        OnClick="@(async () => await StartTranscription())">Not transcribing</MudButton>
+                }
+            </MudCardActions>
+        </MudCard>
+    </div>
 
     <MudExpansionPanels Style="width: 350px">
         <MudExpansionPanel Text="QR Code">
