@@ -134,4 +134,32 @@ public class ControlService
             throw;
         }
     }
+
+    public async Task OnSirenAsync()
+    {
+        try 
+        {
+            using HttpResponseMessage response = await _httpClient.PostAsync(_http_route + "/siren", null);
+            response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to enable Siren");
+            throw;
+        }
+    }
+
+    public async Task OffSirenAsync()
+    {
+        try 
+        {
+            using HttpResponseMessage response = await _httpClient.DeleteAsync(_http_route + "/siren");
+            response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to enable Siren");
+            throw;
+        }
+    }
 }

@@ -51,3 +51,15 @@ async def drive_right():
 async def stop_right():
     await control.right(False)
     return {"message": "Stop"}
+
+
+@router.post("/siren", status_code=status.HTTP_200_OK)
+async def enable_siren():
+    await control.siren(True)
+    return {"message": "Siren on"}
+
+
+@router.post("/siren", status_code=status.HTTP_200_OK)
+async def disable_siren():
+    await control.siren(False)
+    return {"message": "Siren off"}

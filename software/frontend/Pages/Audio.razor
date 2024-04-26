@@ -44,7 +44,9 @@
     @* controller *@
     <div class="d-flex flex-column align-center">
         <MudText Typo="Typo.h3" Class="mb-3">Controller</MudText>
-        <div class="d-flex">
+        <MudFab StartIcon="@Icons.Material.Filled." aria-label="Siren" Size="Size.Large"
+                @onpointerdown="@(async () => await SirenOn())" @onpointerout="@(async () => await SirenOff())"
+                @onpointerup="@(async () => await SirenOff())" />        <div class="d-flex">
             <div class="d-flex flex-column align-center justify-space-between" style="height: 175px;">
                 <MudFab StartIcon="@Icons.Material.Filled.ArrowDropUp" aria-label="Forward" Size="Size.Large"
                     @onpointerdown="@(async () => await ForwardDown())" @onpointerout="@(async () => await ForwardUp())"
@@ -175,5 +177,15 @@
     private async Task RightUp()
     {
         await ControlService.StopRightAsync();
+    }
+
+    private async Task SirenOn()
+    {
+        await ControlService.OnSirenAsync();
+    }
+
+    private async Task SirenOff()
+    {
+        await ControlService.OffSirenAsync();
     }
 }
