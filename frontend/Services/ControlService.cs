@@ -137,7 +137,7 @@ public class ControlService
 
     public async Task OnSirenAsync()
     {
-        try 
+        try
         {
             using HttpResponseMessage response = await _httpClient.PostAsync(_http_route + "/siren", null);
             response.EnsureSuccessStatusCode();
@@ -151,7 +151,7 @@ public class ControlService
 
     public async Task OffSirenAsync()
     {
-        try 
+        try
         {
             using HttpResponseMessage response = await _httpClient.DeleteAsync(_http_route + "/siren");
             response.EnsureSuccessStatusCode();

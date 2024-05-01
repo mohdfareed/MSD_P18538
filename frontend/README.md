@@ -11,7 +11,7 @@ This is the frontend of the project. It is a [MudBlazor](https://mudblazor.com/)
 To run the frontend, run the following command:
 
 ```bash
-cd software/frontend
+cd frontend
 ./startup.sh
 ```
 
@@ -65,7 +65,7 @@ The diagram above shows an example of a `View` that uses a `Service` to interact
 The frontend is structured as follows:
 
 ```bash
-software/frontend
+frontend
 ├── startup.sh           # Startup script
 ├── Program.cs           # Entry point
 ├── Models               # Models

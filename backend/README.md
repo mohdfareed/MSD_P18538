@@ -15,7 +15,7 @@ The project is written in Python, and uses the [FastAPI](https://fastapi.tiangol
 ## Development Setup
 
 ```sh
-cd software/backend             # change directory to the backend
+cd backend                      # change directory to the backend
 python3 -m venv .venv           # create a virtual environment
 source .venv/bin/activate       # activate virtual environment
 pip install -r requirements.txt # install dependencies
@@ -257,7 +257,7 @@ flowchart LR
 The backend is structured as follows:
 
 ```bash
-software/backend
+backend
 ├── .env                # Environment variables
 ├── setup.sh            # Setup script for development
 ├── startup.py          # Entry point

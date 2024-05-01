@@ -31,9 +31,8 @@ left_motor = None
 """Left motor."""
 right_motor = None
 """Right motor."""
-siren = None
+siren_switch = None
 """Siren"""
-
 
 
 if platform.system() == "Linux":
@@ -43,7 +42,7 @@ if platform.system() == "Linux":
     backward_motor = gpiozero.OutputDevice(BACKWARD_PIN)  # type: ignore
     left_motor = gpiozero.OutputDevice(LEFT_PIN)  # type: ignore
     right_motor = gpiozero.OutputDevice(RIGHT_PIN)  # type: ignore
-    siren = gpiozero.OutputDevice(SIREN_PIN) # type: ignore
+    siren_switch = gpiozero.OutputDevice(SIREN_PIN)  # type: ignore
 
 
 async def forward(activate: bool):
@@ -112,19 +111,20 @@ async def right(activate: bool):
         if right_motor:
             right_motor.off()
         LOGGER.debug("Stopping")
-        
-async def siren (active: bool):
-    """Turn on the siren or stop it 
-    
+
+
+async def siren(activate: bool):
+    """Turn on the siren or stop it
+
     Args:
         activate (bool): Whether to turn the siren on.
     """
-    
-    if active: 
-        if siren:
-            siren.on()
+
+    if activate:
+        if siren_switch:
+            siren_switch.on()
         LOGGER.debug("Turning on Siren")
     else:
-        if siren:
-            siren.off()
+        if siren_switch:
+            siren_switch.off()
         LOGGER.debug("Turning off Siren")

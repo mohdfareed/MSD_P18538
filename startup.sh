@@ -2,7 +2,7 @@
 
 work_dir="$HOME/msd-p18538"
 SESSION_NAME="MSD-P18538"  # name of the tmux session
-SCRIPT="$work_dir/software/backend/startup.py" # startup script
+SCRIPT="$work_dir/backend/startup.py" # startup script
 PYTHON="$work_dir/.venv/bin/python" # virtual environment
 chmod +x $SCRIPT
 

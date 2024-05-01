@@ -22,7 +22,7 @@ Interactive Training Robot for Fire Safety. This repository contains the softwar
 4. Open a terminal window and run the following:
 
 ```sh
-export GITHUB_LINK=https://raw.githubusercontent.com/mohdfareed/msd-p18538/main/software/setup.sh
+export GITHUB_LINK=https://raw.githubusercontent.com/mohdfareed/msd-p18538/main/setup.sh
 curl $GITHUB_LINK | bash
 ```
 

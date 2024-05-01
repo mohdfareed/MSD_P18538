@@ -2,8 +2,8 @@
 
 # This is the script meant for setting up a new RPi
 app_dir="$HOME/msd-p18538" # The directory where the app is located
-env="$app_dir/software/environment.sh" # The environment file
-backend_env="$app_dir/software/backend/.env" # The backend environment file
+env="$app_dir/environment.sh" # The environment file
+backend_env="$app_dir/backend/.env" # The backend environment file
 log_file="$HOME/setup.log" # The log file
 
 # Ask user for api key if it doesn't exist
@@ -63,7 +63,7 @@ pyenv local 3.12 2>&1 | tee -a $log_file # Set python 3.12 as local version
 
 # Setup python environment
 cd $app_dir
-req_file="$app_dir/software/backend/requirements.txt" # The requirements file
+req_file="$app_dir/backend/requirements.txt" # The requirements file
 python -m venv .venv 2>&1 | tee -a $log_file      # Create virtual environment
 source .venv/bin/activate 2>&1 | tee -a $log_file # Activate virtual environment
 pip install -r $req_file 2>&1 | tee -a $log_file  # Install dependencies
@@ -88,7 +88,7 @@ echo ".net environment setup complete." | tee -a $log_file
 # For adhoc network ensure we have dhcp server downloaded and configured to
 # automatically handle IP hosting
 sudo apt install isc-dhcp-server -y 2>&1 | tee -a $log_file
-dhcpd_conf="$app_dir/software/backend/app/services/network/dhcpd.conf"
+dhcpd_conf="$app_dir/backend/app/services/network/dhcpd.conf"
 sudo cp $dhcpd_conf /etc/dhcp/dhcpd.conf
 echo "AdHoc network setup complete." | tee -a $log_file
 
@@ -104,7 +104,7 @@ sudo mkcert -install 2>&1 | tee -a $log_file
 echo "mkcert installed." | tee -a $log_file
 
 # Generate certificates
-cert_dir="$app_dir/software/backend/data" # The directory of certificates
+cert_dir="$app_dir/backend/data" # The directory of certificates
 cd $cert_dir && mkcert -cert-file certificate.pem -key-file private.key \
   'localhost' '*.local' '*.student.rit.edu' 2>&1 | tee -a $log_file
 sys_cert_path="/usr/local/share/ca-certificates/msd-p18538.crt"
@@ -117,7 +117,7 @@ echo "Certificates generated." | tee -a $log_file
 # Setup services
 # =============================================================================
 
-startup_script="$app_dir/software/startup.sh" # The startup script
+startup_script="$app_dir/startup.sh" # The startup script
 sudo chmod +x $startup_script 2>&1 | tee -a $log_file
 cron_job="@reboot $startup_script" # The CRON job to start the app
 current_cron=$(mktemp) # Temporary file to store current cron jobs

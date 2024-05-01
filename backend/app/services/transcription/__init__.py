@@ -25,6 +25,15 @@ https://github.com/Uberi/speech_recognition#readme
 The following discussions were used to implement real-time speech recognition:
 https://github.com/openai/whisper/discussions/608
 https://github.com/davabase/whisper_real_time/blob/master/transcribe_demo.py
+
+# TODO: Implement a better algorithm for real-time speech recognition.
+
+The service takes in the following:
+
+- mic_config: MicrophoneConfig
+- audio_source: Event[bytes]
+
+And it sets up a transcription event that is used to process transcriptions.
 """
 
 import logging

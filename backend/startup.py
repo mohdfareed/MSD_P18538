@@ -27,6 +27,7 @@ frontend = os.path.join(os.path.dirname(backend), "frontend")
 cert_path = os.path.join(backend, "data", "certificate.pem")
 key_path = os.path.join(backend, "data", "private.key")
 root_ca = os.path.join(ROOT_CA_DIR, "rootCA.pem")
+# TODO: Use RIT provided HTTPS certificates.
 
 
 def main(debug=False):
